@@ -22,8 +22,8 @@ cargo test --workspace --all-targets
 
 Use Rust target `x86_64-pc-windows-gnu` in MINGW64 and
 `aarch64-pc-windows-gnullvm` in CLANGARM64. Set that target explicitly if it is
-not your active Rust toolchain's default. The recipe is adapted from the
-Kingfisher build; it has not been executed for this standalone fork.
+not your active Rust toolchain's default. This build flow is verified by CI on both Windows architectures, with explicit
+compiler and architecture settings in `.github/workflows/ci.yml`.
 The build script selects static C++ runtime libraries by target environment.
 MSVC is a separate configuration requiring compatible MSVC native libraries.
 

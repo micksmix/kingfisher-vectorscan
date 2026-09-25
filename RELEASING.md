@@ -32,7 +32,7 @@ CI uses Rust 1.96.0. The inherited 1.73 manifest minimum remains unverified.
    **bootstrap**. The workflow requires a tag matching both package versions,
    reruns CI, packages/verifies, and publishes the sys crate first.
 5. After both crates exist, configure Trusted Publishing below and revoke the
-   bootstrap token/remove the secret.
+   bootstrap token and delete the GitHub Actions secret.
 
 A normal branch push never publishes. The workflow skips versions already present
 on crates.io so a partial two-crate release can be retried. It fails on registry

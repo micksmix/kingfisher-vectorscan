@@ -1,4 +1,4 @@
-# Fork 0.1.0 (unreleased)
+# Fork 0.1.0
 
 - Discover the MinGW GCC runtime archive without application-specific linker flags.
 

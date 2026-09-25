@@ -15,13 +15,15 @@ One repository contains two crates, initially versioned `0.1.0`:
 - [`kingfisher-vectorscan-sys`](kingfisher-vectorscan-sys): raw FFI bindings and native build support,
   including vendored Vectorscan 5.4.13.
 
-The initial 0.1.0 release is being prepared; the crates are not published yet.
+Version 0.1.0 is published on crates.io:
+[kingfisher-vectorscan](https://crates.io/crates/kingfisher-vectorscan/0.1.0) and
+[kingfisher-vectorscan-sys](https://crates.io/crates/kingfisher-vectorscan-sys/0.1.0).
 
-## Use locally
+## Usage
 
 ```toml
 [dependencies]
-kingfisher-vectorscan = { path = "../kingfisher-vectorscan/kingfisher-vectorscan" }
+kingfisher-vectorscan = "0.1.0"
 ```
 
 ```rust
@@ -41,7 +43,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 Run the same example with `cargo run -p kingfisher-vectorscan --example scan`.
-For a future crates.io release, use `kingfisher-vectorscan = "0.1.0"`.
 Existing users can retain `vectorscan_rs` imports by aliasing the package:
 
 ```toml
@@ -62,7 +63,8 @@ Vectorscan/Hyperscan library. Set `HYPERSCAN_ROOT` to its installation prefix
 containing `lib/hs` and headers; choose a library matching the Rust target and
 C++ toolchain. The inherited automatic vcpkg discovery handles only x64 layouts;
 ARM64 needs an explicit prefix. See [WINDOWS.md](WINDOWS.md) for a standalone
-native build recipe. Windows x64 and ARM64 verification remains pending.
+native build recipe. CI verifies Windows x64 (MinGW GNU) and ARM64
+(CLANGARM64), alongside Linux x64/ARM64 and macOS ARM64.
 
 Default builds disable optional SIMD specialization. `cpu_native`,
 `simd_specialization`, and `fast_nonportable` may produce binaries that only run

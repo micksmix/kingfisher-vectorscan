@@ -27,11 +27,8 @@ doctest command. No generated bindings were changed to hide this inherited issue
 
 Not verified here:
 
-- Linux and Windows x64/ARM64 execution: corresponding environments unavailable.
 - The inherited Rust 1.73 minimum: only the installed Rust 1.96 toolchain was used.
 - CPU specialization features: not exercised in the extraction checks.
-- High-level registry package build: the renamed sys dependency is not published;
-  workspace compilation and package file-list inspection passed instead.
 - Kingfisher integration: its working tree is unchanged until the later cutover
   described in RELEASING.md.
 
@@ -44,5 +41,18 @@ are recorded by GitHub Actions; local checks do not establish cross-platform suc
 - Release tag guard accepts v0.1.0 and rejects mismatched versions/non-tag input.
 - macOS ARM64 release build with `unit_hyperscan` and `gen` passes:
   all 2,997 native tests and 11 high-level Rust tests pass with regenerated bindings.
-- Windows x64/ARM64 and Linux x64/ARM64 jobs are configured; actual remote
-  results must be checked before release.
+- [CI for commit 24e6b22](https://github.com/micksmix/kingfisher-vectorscan/actions/runs/36103327174)
+  passes on Linux x64/ARM64, macOS ARM64, and Windows x64/ARM64.
+  Unix jobs verify native tests, regenerated bindings, and the packaged sys crate.
+  Windows jobs build native Vectorscan and run the Rust tests and example.
+- Windows x64 CI initially exposed the missing GCC runtime search directory.
+  The sys build script now obtains it from the configured compiler; the corrected
+  build passed both Windows architectures without Kingfisher's Makefile flags.
+
+## Published release
+
+[Release run for v0.1.0](https://github.com/micksmix/kingfisher-vectorscan/actions/runs/36103574877)
+completed successfully. All five platform jobs passed, and Cargo verified and
+published both crates, with the sys crate first and the high-level crate resolved
+against that published registry dependency. Both version 0.1.0 entries were
+confirmed through the crates.io API and are not yanked.
