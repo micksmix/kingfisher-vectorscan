@@ -130,31 +130,29 @@ fn link_runtime(target: &str) {
     if target.ends_with("-msvc") {
         return;
     }
-    if target.ends_with("-windows-gnullvm") {
-        for lib in ["c++", "c++abi", "unwind"] {
-            println!("cargo:rustc-link-lib=static={lib}");
-        }
-    } else if target.ends_with("-windows-gnu") {
-        // The GNU Rust target already requires a GCC linker. Query that C driver,
-        // not a C++ compiler, for its versioned runtime directory.
+    if target.ends_with("-windows-gnullvm") || target.ends_with("-windows-gnu") {
+        // Rust needs the target linker toolchain already. Ask its C driver for
+        // each archive: the Vectorscan prefix need not be the toolchain prefix.
+        // In particular, rustc must find static runtimes before invoking a linker.
+        let libraries: &[&str] = if target.ends_with("-gnullvm") {
+            &["c++", "c++abi", "unwind"]
+        } else {
+            &["stdc++", "gcc", "winpthread"]
+        };
         let compiler = cc::Build::new().get_compiler();
-        let output = compiler
-            .to_command()
-            .arg("-print-libgcc-file-name")
-            .output()
-            .expect("Failed to locate MinGW runtime");
-        assert!(output.status.success(), "GCC runtime query failed");
-        let runtime = PathBuf::from(String::from_utf8(output.stdout).unwrap().trim());
-        assert!(
-            runtime.is_file(),
-            "Missing GCC runtime: {}",
-            runtime.display()
-        );
-        println!(
-            "cargo:rustc-link-search=native={}",
-            runtime.parent().unwrap().display()
-        );
-        for lib in ["stdc++", "gcc", "winpthread"] {
+        for lib in libraries {
+            let output = compiler
+                .to_command()
+                .arg(format!("-print-file-name=lib{lib}.a"))
+                .output()
+                .expect("Failed to locate Windows target runtime");
+            assert!(output.status.success(), "Runtime query failed for {lib}");
+            let runtime = PathBuf::from(String::from_utf8(output.stdout).unwrap().trim());
+            assert!(runtime.is_file(), "Missing target runtime {}. Install matching MSYS2 runtime/development libraries and set CC to the target's C driver", runtime.display());
+            println!(
+                "cargo:rustc-link-search=native={}",
+                runtime.parent().unwrap().display()
+            );
             println!("cargo:rustc-link-lib=static={lib}");
         }
     } else {

@@ -42,6 +42,6 @@ compiler and architecture settings in `.github/workflows/ci.yml`.
 The build script selects static C++ runtime libraries by target environment.
 MSVC is a separate configuration requiring compatible MSVC native libraries.
 
-For MinGW GCC, the build script queries the configured C compiler/linker driver for
-`libgcc.a` and adds its versioned directory to Rust’s native library search path.
-Set `CC` if the intended GCC driver is not the default one on PATH.
+For both Windows targets, the build script queries the configured C compiler/linker
+driver for each static C++ runtime archive and adds its directory to Rust’s native
+library search path. Set `CC` if the intended driver is not the default one on PATH.

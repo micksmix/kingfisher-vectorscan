@@ -14,7 +14,7 @@ Windows MSVC requires an externally installed compatible library.
 Use `build-from-source` or `VECTORSCAN_BUILD_FROM_SOURCE=1` for the bundled source.
 CPU specialization, native tests, and ASan force source builds. These source
 options conflict with `HYPERSCAN_ROOT`. Source checkouts and targets without
-archives compile the bundled source; MSVC requires `HYPERSCAN_ROOT` instead.
+archives compile the bundled source; MSVC requires a compatible external installation via `HYPERSCAN_ROOT` or a matching vcpkg layout.
 
 For offline builds, place the original release archive in `VECTORSCAN_PREBUILT_DIR`
 and set `VECTORSCAN_OFFLINE=1`. `CARGO_NET_OFFLINE=true` is also honored; Cargo's
