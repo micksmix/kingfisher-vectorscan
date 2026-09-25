@@ -8,7 +8,9 @@ for macOS x64/ARM64, Linux GNU x64/ARM64, Windows GNU x64, and Windows LLVM ARM6
 Rust, the target linker/SDK, C++ runtime libraries, and `curl` are required;
 CMake and Boost are unnecessary when using an archive. Linux archives target
 Ubuntu 22.04 (glibc 2.35, GCC 11 libstdc++); macOS archives target macOS 11+.
-Windows MSVC requires an externally installed compatible library.
+**Windows MSVC has no prebuilt archive and cannot compile the bundled source.**
+It requires an externally installed compatible MSVC static library; GNU/LLVM
+archives cannot be used with MSVC.
 
 `HYPERSCAN_ROOT` selects an installed static library and headers on any platform.
 Use `build-from-source` or `VECTORSCAN_BUILD_FROM_SOURCE=1` for the bundled source.
@@ -26,12 +28,36 @@ See the [repository build guide](https://github.com/micksmix/kingfisher-vectorsc
 and [Windows guide](https://github.com/micksmix/kingfisher-vectorscan/blob/main/WINDOWS.md).
 
 
+## Use from Cargo.toml
+
+```toml
+[dependencies]
+kingfisher-vectorscan-sys = "0.1.1"
+```
+
+Run `cargo build --release`. On the supported targets above, this automatically
+fetches and links Vectorscan without compiling its C/C++ source locally. Your Rust
+code and the bindings still compile normally. Prefer the high-level
+`kingfisher-vectorscan` crate unless you need raw FFI.
+
 ## Dependencies for source builds
+
+To build the bundled library yourself, change the dependency to:
+
+```toml
+[dependencies]
+kingfisher-vectorscan-sys = { version = "0.1.1", features = ["build-from-source"] }
+```
+
+Install the following dependencies and run `cargo build --release`. This does
+not enable MSVC source builds; see the Windows guide above.
+
+- C/C++ compiler and Make or Ninja
 - [Boost](https://boost.org) >= 1.57
 - [CMake](https://cmake.org)
-- Optional: [Clang](https://clang.llvm.org), when building with the `bindgen` feature
+- Optional: [Clang](https://clang.llvm.org), when building with the `gen` feature
 
-This has been tested on x86_64 Linux, x86_64 macOS, and aarch64 macOS.
+CI exercises Linux and macOS on x64/ARM64 and both supported Windows targets.
 
 
 ## Implementation Notes

@@ -1,4 +1,4 @@
-# Fork 0.1.1 (unreleased)
+# Fork 0.1.1 (2026-09-25)
 
 - Use checksum-pinned GitHub native archives for published crates on Linux GNU,
   macOS, and Windows GNU/LLVM, on x64 and ARM64.
