@@ -3,7 +3,7 @@ name = "kingfisher-vectorscan"
 description = "Ergonomic bindings to the Vectorscan high-performance regex library"
 readme = "README.md"
 
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Brad Larsen <brad@bradfordlarsen.com>"]
 edition = "2021"
 rust-version = "1.73"
@@ -13,6 +13,7 @@ keywords = ["ffi", "bindings", "text", "regex"]
 categories = ["api-bindings", "parsing", "text-processing"]
 
 [features]
+build-from-source = ["kingfisher-vectorscan-sys/build-from-source"]
 # Specialize the build of Vectorscan to use available SIMD instructions on the build system's CPU.
 # This will result in binary that is not portable to other CPUs.
 simd_specialization = ["kingfisher-vectorscan-sys/simd_specialization"]
@@ -33,4 +34,4 @@ bitflags = "2.0"
 foreign-types = "0.5"
 libc = "0.2"
 thiserror = "1.0"
-kingfisher-vectorscan-sys = { version = "0.1.0", path = "../kingfisher-vectorscan-sys" }
+kingfisher-vectorscan-sys = { version = "0.1.1", path = "../kingfisher-vectorscan-sys" }

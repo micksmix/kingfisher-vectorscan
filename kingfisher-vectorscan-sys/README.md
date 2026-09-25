@@ -3,10 +3,30 @@
 
 ## Overview
 This crate implements minimal Rust bindings to the [Vectorscan](https://github.com/Vectorcamp/vectorscan) fork of [Hyperscan](https://github.com/intel/hyperscan), the high-performance regular expression engine.
-On macOS/Linux this crate builds vendored Vectorscan from source. On Windows it links an externally installed library using `HYPERSCAN_ROOT`.
+Published releases starting with 0.1.1 use checksum-verified GitHub release archives
+for macOS x64/ARM64, Linux GNU x64/ARM64, Windows GNU x64, and Windows LLVM ARM64.
+Rust, the target linker/SDK, C++ runtime libraries, and `curl` are required;
+CMake and Boost are unnecessary when using an archive. Linux archives target
+Ubuntu 22.04 (glibc 2.35, GCC 11 libstdc++); macOS archives target macOS 11+.
+Windows MSVC requires an externally installed compatible library.
+
+`HYPERSCAN_ROOT` selects an installed static library and headers on any platform.
+Use `build-from-source` or `VECTORSCAN_BUILD_FROM_SOURCE=1` for the bundled source.
+CPU specialization, native tests, and ASan force source builds. These source
+options conflict with `HYPERSCAN_ROOT`. Source checkouts and targets without
+archives compile the bundled source; MSVC requires `HYPERSCAN_ROOT` instead.
+
+For offline builds, place the original release archive in `VECTORSCAN_PREBUILT_DIR`
+and set `VECTORSCAN_OFFLINE=1`. `CARGO_NET_OFFLINE=true` is also honored; Cargo's
+`--offline` alone does not sandbox build-script networking. Download failures and
+checksum mismatches fail explicitly. The release workflow embeds hashes in the
+published crate; source checkouts contain an empty manifest.
+
+See the [repository build guide](https://github.com/micksmix/kingfisher-vectorscan#build-requirements-and-portability)
+and [Windows guide](https://github.com/micksmix/kingfisher-vectorscan/blob/main/WINDOWS.md).
 
 
-## Dependencies
+## Dependencies for source builds
 - [Boost](https://boost.org) >= 1.57
 - [CMake](https://cmake.org)
 - Optional: [Clang](https://clang.llvm.org), when building with the `bindgen` feature

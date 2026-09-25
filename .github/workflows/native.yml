@@ -1,0 +1,117 @@
+name: Native archives
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+
+jobs:
+  archives:
+    name: Prebuilt (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            shell: bash
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+            shell: bash
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            shell: bash
+          - os: macos-15
+            target: aarch64-apple-darwin
+            shell: bash
+          - os: windows-2022
+            target: x86_64-pc-windows-gnu
+            shell: 'msys2 {0}'
+            msystem: MINGW64
+            prefix: mingw-w64-x86_64
+            cc: gcc
+            cxx: g++
+          - os: windows-11-arm
+            target: aarch64-pc-windows-gnullvm
+            shell: 'msys2 {0}'
+            msystem: CLANGARM64
+            prefix: mingw-w64-clang-aarch64
+            cc: clang
+            cxx: clang++
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87
+        with:
+          toolchain: 1.96.0
+          targets: ${{ matrix.target }}
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y cmake g++ libboost-dev python3-tomli
+      - name: macOS build dependencies
+        if: runner.os == 'macOS'
+        run: brew install cmake boost
+      - uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
+        if: runner.os == 'Windows'
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: true
+          path-type: inherit
+          install: >-
+            ${{ matrix.prefix }}-toolchain
+            ${{ matrix.prefix }}-cmake
+            ${{ matrix.prefix }}-boost
+            ${{ matrix.prefix }}-python
+            git make
+      - run: python3 -m unittest discover -s scripts -p "test_*.py"
+      - name: Build and package native library
+        env:
+          NATIVE_TARGET: ${{ matrix.target }}
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: |
+          set -euo pipefail
+          python3 scripts/native.py build --target "$NATIVE_TARGET"
+          python3 scripts/native.py manifest
+      - name: Test archive without compiling native code
+        env:
+          CARGO_BUILD_TARGET: ${{ matrix.target }}
+          CC: ${{ matrix.cc }}
+          CXX: vectorscan-cxx-must-not-run
+          CMAKE: vectorscan-cmake-must-not-run
+          VECTORSCAN_OFFLINE: '1'
+        run: |
+          set -euo pipefail
+          if [ "${RUNNER_OS}" = Windows ]; then
+            export VECTORSCAN_PREBUILT_DIR="$(cygpath -m "$PWD/native-archives")"
+          else
+            export VECTORSCAN_PREBUILT_DIR="$PWD/native-archives"
+          fi
+          cargo test --workspace --all-targets
+          cargo run -p kingfisher-vectorscan --example scan
+          cargo package -p kingfisher-vectorscan-sys --allow-dirty
+      - name: Verify Windows Cargo source fallback
+        if: runner.os == 'Windows'
+        env:
+          CARGO_BUILD_TARGET: ${{ matrix.target }}
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+          CMAKE_GENERATOR: MinGW Makefiles
+        run: cargo test --workspace --all-targets --features build-from-source
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-${{ matrix.target }}
+          path: native-archives/*.tar.gz
+          if-no-files-found: error

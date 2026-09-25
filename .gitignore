@@ -20,3 +20,8 @@ native-build/
 
 # Python release-helper bytecode
 __pycache__/
+
+# Native release staging
+native-install/
+native-archives/
+native-canonical/

@@ -43,7 +43,7 @@ jobs:
     timeout-minutes: 45
     environment: crates-io
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -53,8 +53,17 @@ jobs:
         with:
           toolchain: 1.96.0
       - run: sudo apt-get update && sudo apt-get install -y cmake g++ libboost-dev
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: native-*
+          path: native-archives
+          merge-multiple: true
+      - name: Publish tested native archives and embed checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/native.py release
       - name: Verify sys archive before acquiring short-lived credentials
-        run: cargo package -p kingfisher-vectorscan-sys
+        run: cargo package -p kingfisher-vectorscan-sys --allow-dirty
       - name: Select publishing authentication
         id: mode
         env:

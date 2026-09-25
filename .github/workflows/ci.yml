@@ -17,6 +17,9 @@ env:
   CARGO_PROFILE_TEST_DEBUG: '0'
 
 jobs:
+  native:
+    uses: ./.github/workflows/native.yml
+
   unix:
     name: Rust and native tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

@@ -8,13 +8,44 @@ The fork preserves bradlarsen/vectorscan-rs v0.0.6 history and explicit NOTICE
 attribution. Local `origin` uses the personal SSH alias
 `git@githubmg:micksmix/kingfisher-vectorscan.git`; public URLs use github.com.
 
-## Build workflow
+## Native archive pipeline (0.1.1+)
 
-`.github/workflows/ci.yml` runs on main/codex branch pushes, pull requests, manual
-runs, and release-workflow calls. It tests Linux x64/ARM64, macOS ARM64, and
-Windows x64/ARM64. Unix jobs also exercise regenerated bindings and the native
-unit suite; Windows jobs build and install native Vectorscan before Rust tests.
-CI uses Rust 1.96.0. The inherited 1.73 manifest minimum remains unverified.
+`ci.yml` calls `native.yml`, which builds portable static Vectorscan archives for
+Linux GNU, macOS, and Windows GNU/LLVM, on x64 and ARM64 runners. Linux uses Ubuntu
+22.04; macOS has deployment target 11.0. CPU-native and optional SIMD specialization
+are disabled. Archives contain `lib/libhs.a`, headers, and license notices.
+They deliberately do not redistribute toolchain C++ runtimes.
+
+Every archive is tested through the Rust APIs and `cargo package`, with an invalid
+CMake/C++ compiler path and offline mode, so a source fallback fails the job.
+Regular CI continues to exercise source builds and the native suite. Tests use
+Rust 1.96.0; the inherited 1.73 minimum remains unverified.
+
+The tag-triggered publishing job downloads the six tested artifacts, creates a
+GitHub release, embeds their SHA-256 hashes in
+`kingfisher-vectorscan-sys/prebuilt-manifest.txt`, and packages/publishes the crates.
+Only that generated manifest may differ from the tag when publishing. The crate
+archive's checksum authenticates the manifest; consumer builds never trust a
+checksum fetched alongside a GitHub asset. Hash mismatches fail closed.
+
+A retry reuses and verifies existing GitHub release assets without overwriting
+them. If a GitHub release exists but lacks a complete valid set, publication
+fails; complete/recover that release before retrying. Do not replace an asset
+already referenced by a published crate. A branch push only builds/tests and
+uploads workflow artifacts; it does not create releases or publish crates.
+
+Local archive testing, from the repository root:
+
+```sh
+python3 scripts/native.py build --target aarch64-apple-darwin
+python3 scripts/native.py manifest
+VECTORSCAN_PREBUILT_DIR="$PWD/native-archives" VECTORSCAN_OFFLINE=1 cargo test --workspace --all-targets
+```
+
+Choose your actual native Rust target. Restore the empty manifest after local
+testing (`git restore kingfisher-vectorscan-sys/prebuilt-manifest.txt`); only the
+release pipeline populates it for publication. Python 3.11+ is preferred; Ubuntu
+22.04 jobs use the `python3-tomli` compatibility package with Python 3.10.
 
 ## First publication (API token)
 

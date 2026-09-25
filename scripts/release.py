@@ -59,8 +59,17 @@ def main():
         return
     if not os.environ.get("CARGO_REGISTRY_TOKEN"):
         raise SystemExit("Configure CARGO_REGISTRY_TOKEN or crates.io Trusted Publishing")
-    subprocess.run(["cargo", "publish", "-p", args.package, "--dry-run"], cwd=ROOT, check=True)
-    subprocess.run(["cargo", "publish", "-p", args.package], cwd=ROOT, check=True)
+    # Only the release manifest may differ from the tag. It is generated from
+    # tested release assets and must be included in the immutable registry archive.
+    changes = subprocess.check_output(["git", "diff", "HEAD", "--name-only"], cwd=ROOT, text=True).splitlines()
+    assert set(changes) <= {"kingfisher-vectorscan-sys/prebuilt-manifest.txt"}, "Unexpected release checkout changes"
+    from native import TARGETS
+    lines = (ROOT / PACKAGES[0] / "prebuilt-manifest.txt").read_text().splitlines()
+    entries = [line.split() for line in lines if line and not line.startswith("#")]
+    assert len(entries) == len(TARGETS) and all(len(row) == 3 and row[0] == version for row in entries)
+    assert {row[1] for row in entries} == set(TARGETS), "Missing release targets"
+    subprocess.run(["cargo", "publish", "-p", args.package, "--allow-dirty", "--dry-run"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "publish", "-p", args.package, "--allow-dirty"], cwd=ROOT, check=True)
     for _ in range(30):
         if published(args.package, version):
             return

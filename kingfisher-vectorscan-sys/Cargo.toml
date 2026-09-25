@@ -6,7 +6,7 @@ readme = "README.md"
 build = "build.rs"
 links = "hs"
 
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Brad Larsen <brad@bradfordlarsen.com>"]
 edition = "2021"
 rust-version = "1.73"
@@ -16,6 +16,8 @@ keywords = ["ffi", "bindings", "text", "regex"]
 categories = ["api-bindings", "parsing", "text-processing"]
 
 [features]
+# Always compile bundled Vectorscan instead of using release archives.
+build-from-source = []
 # This feature causes `bindgen` to run to produce the raw Rust bindings to Vectorscan.
 gen = ["bindgen"]
 
@@ -41,6 +43,15 @@ asan = []
 cc = "1.0"
 bindgen = { version = "0.70", optional = true }
 cmake = "0.1"
+sha2 = "0.10"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+tar = "0.4"
+
+[dev-dependencies]
+sha2 = "0.10"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+tar = "0.4"
+tempfile = "3"
 
 [lib]
 doctest = false

@@ -51,20 +51,50 @@ vectorscan-rs = { package = "kingfisher-vectorscan", version = "0.1.0" }
 
 ## Build requirements and portability
 
-On macOS and Linux, Cargo compiles the bundled C++ library. Install a C/C++
-compiler, CMake, a build tool (Make or Ninja), and Boost headers (>= 1.57).
-For example, `brew install cmake boost` on macOS, or
-`sudo apt-get install build-essential cmake libboost-dev` on Debian/Ubuntu.
-Generated Ragel parser sources and Rust FFI bindings are included.
-The optional sys-crate `gen` feature requires libclang to regenerate bindings.
+Starting with the planned 0.1.1 release, published crates use prebuilt static
+Vectorscan archives from the matching GitHub release on these targets:
 
-On Windows, Cargo currently links an **externally built** compatible static
-Vectorscan/Hyperscan library. Set `HYPERSCAN_ROOT` to its installation prefix
-containing `lib/hs` and headers; choose a library matching the Rust target and
-C++ toolchain. The inherited automatic vcpkg discovery handles only x64 layouts;
-ARM64 needs an explicit prefix. See [WINDOWS.md](WINDOWS.md) for a standalone
-native build recipe. CI verifies Windows x64 (MinGW GNU) and ARM64
-(CLANGARM64), alongside Linux x64/ARM64 and macOS ARM64.
+| Target | Native runtime requirements |
+| --- | --- |
+| `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu` | Ubuntu 22.04 / glibc 2.35 baseline, GCC 11-compatible libstdc++ |
+| `x86_64-apple-darwin`, `aarch64-apple-darwin` | macOS 11+, Apple SDK/linker and system libc++ |
+| `x86_64-pc-windows-gnu` | MSYS2 MINGW64 linker and static GNU C++ runtime libraries |
+| `aarch64-pc-windows-gnullvm` | MSYS2 CLANGARM64 linker and static libc++/libc++abi/unwind libraries |
+
+A normal published-crate build downloads the archive with `curl` (included in
+macOS/Windows; install it on Linux) and verifies a SHA-256 hash embedded in the
+crate before extracting it under Cargo's `OUT_DIR`. It needs no CMake, Boost,
+Ragel, or Vectorscan compilation. Rust and the target's linker, SDK, and C++
+runtime libraries are still required. This does not eliminate native build
+requirements of other dependencies in an application such as Kingfisher.
+Windows MSVC and Linux musl do not have release archives; see [WINDOWS.md](WINDOWS.md)
+for Windows target selection and external MSVC libraries.
+
+Build selection and overrides:
+
+- Set `HYPERSCAN_ROOT` to use an installed compatible static library and headers
+  on any platform. This takes precedence over downloading.
+- Enable `build-from-source` on either crate, or set
+  `VECTORSCAN_BUILD_FROM_SOURCE=1`, to compile the bundled Vectorscan source.
+  CPU specialization, native unit tests, and ASan features also require source.
+  Source options conflict with `HYPERSCAN_ROOT` to avoid silently ignoring them.
+- Set `VECTORSCAN_PREBUILT_DIR` to a directory containing the original release
+  archive for your target. Its embedded checksum is still enforced.
+- Set `VECTORSCAN_OFFLINE=1` (or `CARGO_NET_OFFLINE=true`) to prohibit archive
+  downloads. Prepopulate `VECTORSCAN_PREBUILT_DIR` or use an installed library
+  or source build. Cargo's `--offline` flag alone does not sandbox build-script
+  networking, and `cargo fetch` does not download these native release assets.
+
+Source checkouts have an empty release manifest and build from source. The
+publishing workflow fills the manifest from tested assets before packaging.
+Unsupported targets also use source builds, except MSVC, which requires an
+explicit `HYPERSCAN_ROOT`. A missing download or checksum failure is a hard error
+with override instructions; it never silently switches to compiling C++.
+
+Source builds need a C/C++ compiler, CMake, Make or Ninja, and Boost headers
+(>= 1.57). For example, Xcode Command Line Tools plus `brew install cmake boost`
+on macOS, or `sudo apt-get install build-essential cmake libboost-dev` on Debian/
+Ubuntu. The optional sys-crate `gen` feature additionally needs libclang.
 
 Default builds disable optional SIMD specialization. `cpu_native`,
 `simd_specialization`, and `fast_nonportable` may produce binaries that only run

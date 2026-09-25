@@ -1,8 +1,23 @@
 # Windows native library
 
-The sys crate inherits Kingfisher's external-library linkage. It does not invoke
-Kingfisher or require its repository, but Windows users must install the native
-library before building the Rust crates.
+Published 0.1.1+ crates download and verify the matching static Vectorscan archive
+for `x86_64-pc-windows-gnu` (MSYS2 MINGW64) or
+`aarch64-pc-windows-gnullvm` (MSYS2 CLANGARM64). Select the Rust target explicitly
+with `--target` if your default is MSVC. Keep the matching linker and C++ runtime
+libraries installed and on their normal search paths. These are not MSVC archives.
+CMake and Boost are only needed to build Vectorscan from source.
+
+Set `VECTORSCAN_PREBUILT_DIR` to use a downloaded release archive offline, or
+`HYPERSCAN_ROOT` to link your own compatible static installation. For MSVC,
+`HYPERSCAN_ROOT` must contain MSVC-compatible `lib/hs.lib` and headers; no automatic
+cross-ABI substitution is attempted. The explicit prefix replaces ambiguous
+vcpkg autodetection.
+
+Source checkouts have no release checksums yet and need the native build tools.
+The `build-from-source` feature (or `VECTORSCAN_BUILD_FROM_SOURCE=1`) also compiles
+the bundled source. Set `CC`, `CXX`, and `CMAKE_GENERATOR=MinGW Makefiles` for the
+chosen environment. Do not combine source options with `HYPERSCAN_ROOT`.
+The following external-install recipe remains useful for custom native builds.
 
 From an MSYS2 MINGW64 shell (x64) or CLANGARM64 shell (ARM64), install the matching
 C/C++ toolchain, CMake, Make, and Boost packages. From this repository root:
@@ -27,6 +42,6 @@ compiler and architecture settings in `.github/workflows/ci.yml`.
 The build script selects static C++ runtime libraries by target environment.
 MSVC is a separate configuration requiring compatible MSVC native libraries.
 
-For MinGW GCC, the build script queries the configured C++ compiler for
+For MinGW GCC, the build script queries the configured C compiler/linker driver for
 `libgcc.a` and adds its versioned directory to Rust’s native library search path.
-Set `CXX` if the intended compiler is not the default one on PATH.
+Set `CC` if the intended GCC driver is not the default one on PATH.

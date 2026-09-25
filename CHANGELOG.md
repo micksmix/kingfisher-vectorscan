@@ -1,3 +1,13 @@
+# Fork 0.1.1 (unreleased)
+
+- Use checksum-pinned GitHub native archives for published crates on Linux GNU,
+  macOS, and Windows GNU/LLVM, on x64 and ARM64.
+- Add archive CI, safe extraction, offline archive overrides, and an explicit
+  `build-from-source` feature. Retain installed-library overrides on all platforms.
+- Select native build behavior from Cargo's target rather than the build host.
+- Build/test release archives before publishing either crate; embed checksums in
+  the sys crate and preserve existing GitHub assets on release retries.
+
 # Fork 0.1.0
 
 - Discover the MinGW GCC runtime archive without application-specific linker flags.
