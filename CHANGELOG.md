@@ -1,5 +1,7 @@
 # Fork 0.1.0 (unreleased)
 
+- Discover the MinGW GCC runtime archive without application-specific linker flags.
+
 - Add Linux/macOS/Windows build workflows and a two-crate release workflow
   with initial API-token publishing and subsequent crates.io Trusted Publishing.
 

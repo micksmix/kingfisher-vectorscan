@@ -26,3 +26,7 @@ not your active Rust toolchain's default. The recipe is adapted from the
 Kingfisher build; it has not been executed for this standalone fork.
 The build script selects static C++ runtime libraries by target environment.
 MSVC is a separate configuration requiring compatible MSVC native libraries.
+
+For MinGW GCC, the build script queries the configured C++ compiler for
+`libgcc.a` and adds its versioned directory to Rust’s native library search path.
+Set `CXX` if the intended compiler is not the default one on PATH.

@@ -5,6 +5,7 @@ use std::process::Command;
 use std::path::PathBuf;
 
 /// Get the environment variable with the given name, panicking if it is not set.
+#[cfg(not(target_os = "windows"))]
 fn env(name: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| panic!("`{}` should be set in the environment", name))
 }
@@ -78,6 +79,33 @@ fn main() {
         } else if target_env_kind == "gnu" {
             // On MinGW GNU targets (e.g. x86_64-pc-windows-gnu), prefer static GNU
             // C++ runtime linkage to avoid libstdc++/libgcc/winpthread DLL imports.
+            // GCC keeps libgcc.a in a versioned compiler directory, outside
+            // HYPERSCAN_ROOT/lib. Discover it instead of requiring application
+            // Makefiles to supply an extra -L flag.
+            let compiler = cc::Build::new().cpp(true).get_compiler();
+            let output = compiler
+                .to_command()
+                .arg("-print-libgcc-file-name")
+                .output()
+                .expect("Failed to query the MinGW GCC runtime path");
+            assert!(output.status.success(), "GCC runtime path query failed");
+            let runtime = PathBuf::from(
+                String::from_utf8(output.stdout)
+                    .expect("GCC runtime path is not UTF-8")
+                    .trim(),
+            );
+            assert!(
+                runtime.is_file(),
+                "GCC runtime archive not found: {}",
+                runtime.display()
+            );
+            println!(
+                "cargo:rustc-link-search=native={}",
+                runtime
+                    .parent()
+                    .expect("GCC runtime has no parent directory")
+                    .display()
+            );
             println!("cargo:rustc-link-lib=static=stdc++");
             println!("cargo:rustc-link-lib=static=gcc");
             println!("cargo:rustc-link-lib=static=winpthread");
