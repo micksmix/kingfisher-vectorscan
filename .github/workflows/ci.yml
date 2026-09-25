@@ -1,325 +1,116 @@
 name: CI
 
 on:
-  pull_request:
-
   push:
-    branches:
-    - main
+    branches: [main, 'codex/**']
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
 
-  schedule:
-  # Force a run every tuesday at at 0700 UTC
-  - cron: '* 07 * * 2'
-
+permissions:
+  contents: read
 
 env:
-  CI: '1'
-
-  CARGO_TERM_COLOR: 'always'
-
-  # Emit backtraces on panics (though these may be worthless without debug info).
-  RUST_BACKTRACE: '1'
-
-  # Disable incremental builds; see https://matklad.github.io/2021/09/04/fast-rust-builds.html:
-  #
-  #     CI builds often are closer to from-scratch builds, as changes are typically much bigger than from a local edit-compile cycle.
-  #     For from-scratch builds, incremental adds an extra dependency-tracking overhead.
-  #     It also significantly increases the amount of IO and the size of ./target, which make caching less effective.
+  CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: '0'
-
-  # Disable debug info in CI; speeds up builds and shrinks Actions caches a bit
-  CARGO_PROFILE_RELEASE_DEBUG: '0'
   CARGO_PROFILE_DEV_DEBUG: '0'
   CARGO_PROFILE_TEST_DEBUG: '0'
 
-  # Enable Cargo output explaining why things are being rebuilt.
-  # This can be useful to investigate why caching is not working as expected.
-  #
-  # https://stackoverflow.com/a/70174212
-  # https://doc.crates.io/contrib/implementation/debugging.html#logging
-  # CARGO_LOG: 'cargo::core::compiler::fingerprint=info'
-
 jobs:
-  tests:
-    name: CI (${{ matrix.name }})
-
+  unix:
+    name: Rust and native tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-
+    timeout-minutes: 45
     strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable action
+        with:
+          toolchain: 1.96.0
+          components: rustfmt
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y cmake g++ libboost-dev libclang-dev
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: brew install cmake boost
+      - run: cargo fmt --all --check
+      - run: cargo test --workspace --all-targets
+      - run: cargo test -p kingfisher-vectorscan --doc
+      - run: cargo run -p kingfisher-vectorscan --example scan
+      - name: Native suite and generated bindings
+        run: cargo test --workspace --all-targets --release --features kingfisher-vectorscan-sys/unit_hyperscan,kingfisher-vectorscan-sys/gen
+      - name: Verify sys crate archive
+        run: cargo package -p kingfisher-vectorscan-sys
+      - name: Inspect high-level package (sys must be published before registry verification)
+        run: cargo package -p kingfisher-vectorscan --list
+
+  windows:
+    name: Windows (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
       matrix:
         include:
-        - name: ubuntu-22.04.x86_64.release
-          os: ubuntu-22.04
-          rust: stable
-          profile: release
-          features: unit_hyperscan
-          install_dependencies: |
-            sudo apt-get update && sudo apt-get install zsh libboost-all-dev
-          check_docs: false
-          use_ninja: false
-
-        - name: ubuntu-22.04.x86_64.test
-          os: ubuntu-22.04
-          rust: stable
-          profile: test
-          features: unit_hyperscan
-          install_dependencies: |
-            sudo apt-get update && sudo apt-get install zsh libboost-all-dev
-          check_docs: true
-          use_ninja: false
-
-        - name: ubuntu-22.04.x86_64.release.cpu_native
-          os: ubuntu-22.04
-          rust: stable
-          profile: release
-          features: unit_hyperscan,cpu_native
-          install_dependencies: |
-            sudo apt-get update && sudo apt-get install zsh libboost-all-dev
-          check_docs: false
-          use_ninja: false
-
-
-        - name: ubuntu-24.04.x86_64.release
-          os: ubuntu-24.04
-          rust: stable
-          profile: release
-          features: unit_hyperscan
-          install_dependencies: |
-            sudo apt-get update && sudo apt-get install zsh libboost-all-dev
-          check_docs: false
-          use_ninja: false
-
-        - name: ubuntu-24.04.x86_64.test
-          os: ubuntu-24.04
-          rust: stable
-          profile: test
-          features: unit_hyperscan
-          install_dependencies: |
-            sudo apt-get update && sudo apt-get install zsh libboost-all-dev
-          check_docs: true
-          use_ninja: false
-
-        - name: ubuntu-24.04.x86_64.release.cpu_native
-          os: ubuntu-24.04
-          rust: stable
-          profile: release
-          features: unit_hyperscan,cpu_native
-          install_dependencies: |
-            sudo apt-get update && sudo apt-get install zsh libboost-all-dev
-          check_docs: false
-          use_ninja: false
-
-
-        - name: ubuntu-24.04.arm64.release
-          os: ubuntu-24.04-arm
-          rust: stable
-          profile: release
-          features: unit_hyperscan
-          install_dependencies: |
-            sudo apt-get update && sudo apt-get install zsh libboost-all-dev
-          check_docs: false
-          use_ninja: false
-
-        - name: ubuntu-24.04.arm64.test
-          os: ubuntu-24.04-arm
-          rust: stable
-          profile: test
-          features: unit_hyperscan
-          install_dependencies: |
-            sudo apt-get update && sudo apt-get install zsh libboost-all-dev
-          check_docs: true
-          use_ninja: false
-
-        - name: ubuntu-24.04.arm64.release.cpu_native
-          os: ubuntu-24.04-arm
-          rust: stable
-          profile: release
-          features: unit_hyperscan,cpu_native
-          install_dependencies: |
-            sudo apt-get update && sudo apt-get install zsh libboost-all-dev
-          check_docs: false
-          use_ninja: false
-
-
-        - name: macos-14.arm64.test
-          os: macos-14  # m1-based macos
-          rust: stable
-          profile: test
-          features: unit_hyperscan
-          install_dependencies: |
-            brew install coreutils boost
-          check_docs: false
-          use_ninja: true
-
-        - name: macos-14.arm64.release
-          os: macos-14  # m1-based macos
-          rust: stable
-          profile: release
-          features: unit_hyperscan
-          install_dependencies: |
-            brew install coreutils boost
-          check_docs: false
-          use_ninja: true
-
-        # A build that runs with `bindgen` enabled
-        - name: macos-14.arm64.gen.release
-          os: macos-14  # m1-based macos
-          rust: stable
-          profile: release
-          features: unit_hyperscan,gen
-          install_dependencies: |
-            brew install coreutils boost
-          check_docs: false
-          use_ninja: true
-
-        - name: macos-14.arm64.release.cpu_native
-          os: macos-14  # m1-based macos
-          rust: stable
-          profile: release
-          features: unit_hyperscan,cpu_native
-          install_dependencies: |
-            brew install coreutils boost
-          check_docs: false
-          use_ninja: true
-
-
-        - name: macos-15.arm64.test
-          os: macos-15
-          rust: stable
-          profile: test
-          features: unit_hyperscan
-          install_dependencies: |
-            brew install coreutils boost
-          check_docs: false
-          use_ninja: true
-
-        - name: macos-15.arm64.release
-          os: macos-15
-          rust: stable
-          profile: release
-          features: unit_hyperscan
-          install_dependencies: |
-            brew install coreutils boost
-          check_docs: false
-          use_ninja: true
-
-        # A build that runs with `bindgen` enabled
-        - name: macos-15.arm64.gen.release
-          os: macos-15
-          rust: stable
-          profile: release
-          features: unit_hyperscan,gen
-          install_dependencies: |
-            brew install coreutils boost
-          check_docs: false
-          use_ninja: true
-
-        - name: macos-15.arm64.release.cpu_native
-          os: macos-15
-          rust: stable
-          profile: release
-          features: unit_hyperscan,cpu_native
-          install_dependencies: |
-            brew install coreutils boost
-          check_docs: false
-          use_ninja: true
-
-
-        - name: macos-26.arm64.test
-          os: macos-26
-          rust: stable
-          profile: test
-          features: unit_hyperscan
-          install_dependencies: |
-            brew install coreutils boost
-          check_docs: false
-          use_ninja: true
-
-        - name: macos-26.arm64.release
-          os: macos-26
-          rust: stable
-          profile: release
-          features: unit_hyperscan
-          install_dependencies: |
-            brew install coreutils boost
-          check_docs: false
-          use_ninja: true
-
-        # A build that runs with `bindgen` enabled
-        - name: macos-26.arm64.gen.release
-          os: macos-26
-          rust: stable
-          profile: release
-          features: unit_hyperscan,gen
-          install_dependencies: |
-            brew install coreutils boost
-          check_docs: false
-          use_ninja: true
-
-        - name: macos-26.arm64.release.cpu_native
-          os: macos-26
-          rust: stable
-          profile: release
-          features: unit_hyperscan,cpu_native
-          install_dependencies: |
-            brew install coreutils boost
-          check_docs: false
-          use_ninja: true
-
-        # Fails:
-        #
-        # - name: windows-2022.x86_64.test
-        #   os: windows-2022
-        #   rust: stable
-        #   profile: test
-        #   features: unit_hyperscan
-        #   install_dependencies: |
-        #   check_docs: false
-        #   use_ninja: false
-
-    env:
-      CMAKE_GENERATOR: ${{ (matrix.use_ninja && 'Ninja') || 'Unix Makefiles' }}
-
+          - os: windows-2022
+            msystem: MINGW64
+            prefix: mingw-w64-x86_64
+            target: x86_64-pc-windows-gnu
+            cc: gcc
+            cxx: g++
+            processor: AMD64
+          - os: windows-11-arm
+            msystem: CLANGARM64
+            prefix: mingw-w64-clang-aarch64
+            target: aarch64-pc-windows-gnullvm
+            cc: clang
+            cxx: clang++
+            processor: ARM64
     steps:
-    - uses: actions/checkout@v6
-      with:
-        persist-credentials: false
-
-    - name: Install dependencies
-      run: ${{ matrix.install_dependencies }}
-
-    - name: Install Rust toolchain
-      id: install-rust-toolchain
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: ${{ matrix.rust }}
-
-    # N.B. cache disabled since certain build configurations end up producing
-    # microarchitecture-specific code that is not portable across CPUs
-    # generally
-
-    # - name: Cache
-    #   uses: Swatinem/rust-cache@v2
-    #   with:
-    #     prefix-key: 'ci-tests'
-    #     key: ${{ matrix.name }}
-
-    - name: Build tests
-      run: cargo test --no-run -vv --profile=${{ matrix.profile }} --features=${{ matrix.features }} --timings
-
-    - name: Run tests
-      run: cargo test -vv --profile=${{ matrix.profile }} --features=${{ matrix.features }} --timings
-
-    - name: Check documentation
-      if: ${{ matrix.check_docs }}
-      env:
-        RUSTDOCFLAGS: -D warnings
-      run: cargo doc --verbose --profile=${{ matrix.profile }} --features=${{ matrix.features }} --timings --no-deps --document-private-items
-
-    # See https://doc.rust-lang.org/nightly/cargo/reference/timings.html for details
-    - name: Upload build timings
-      uses: actions/upload-artifact@v7
-      with:
-        name: build-timings.${{ matrix.name }}
-        path: target/cargo-timings
-        if-no-files-found: error
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87
+        with:
+          toolchain: 1.96.0
+          targets: ${{ matrix.target }}
+      - uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884 # v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: true
+          path-type: inherit
+          install: >-
+            ${{ matrix.prefix }}-toolchain
+            ${{ matrix.prefix }}-cmake
+            ${{ matrix.prefix }}-boost
+            ${{ matrix.prefix }}-python
+            git make
+      - name: Build native library and test Rust bindings
+        shell: msys2 {0}
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+          NATIVE_PROCESSOR: ${{ matrix.processor }}
+          CARGO_BUILD_TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          cmake -S kingfisher-vectorscan-sys/vectorscan -B native-build \
+            -G 'MinGW Makefiles' \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON \
+            -DBUILD_UNIT=OFF -DBUILD_TOOLS=OFF -DFAT_RUNTIME=OFF \
+            -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_SYSTEM_PROCESSOR="$NATIVE_PROCESSOR" \
+            -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
+            -DCMAKE_INSTALL_PREFIX="$MINGW_PREFIX"
+          cmake --build native-build --parallel 4
+          cmake --install native-build
+          export HYPERSCAN_ROOT
+          HYPERSCAN_ROOT="$(cygpath -m "$MINGW_PREFIX")"
+          cargo test --workspace --all-targets
+          cargo run -p kingfisher-vectorscan --example scan

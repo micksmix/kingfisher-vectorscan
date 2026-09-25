@@ -1,0 +1,36 @@
+[package]
+name = "kingfisher-vectorscan"
+description = "Ergonomic bindings to the Vectorscan high-performance regex library"
+readme = "README.md"
+
+version = "0.1.0"
+authors = ["Brad Larsen <brad@bradfordlarsen.com>"]
+edition = "2021"
+rust-version = "1.73"
+license = "Apache-2.0 OR MIT"
+repository = "https://github.com/micksmix/kingfisher-vectorscan"
+keywords = ["ffi", "bindings", "text", "regex"]
+categories = ["api-bindings", "parsing", "text-processing"]
+
+[features]
+# Specialize the build of Vectorscan to use available SIMD instructions on the build system's CPU.
+# This will result in binary that is not portable to other CPUs.
+simd_specialization = ["kingfisher-vectorscan-sys/simd_specialization"]
+
+# Specialize the build of Vectorscan for the microarchitecture of the build system's CPU.
+# This will result in binary that is not portable to other CPUs.
+cpu_native = ["kingfisher-vectorscan-sys/cpu_native"]
+
+# Enable all features that can improve speed but break binary portability.
+fast_nonportable = ["cpu_native", "simd_specialization"]
+
+# This feature causes the Vectorscan unit test suite to be built and run at
+# crate build time.
+unit_hyperscan = ["kingfisher-vectorscan-sys/unit_hyperscan"]
+
+[dependencies]
+bitflags = "2.0"
+foreign-types = "0.5"
+libc = "0.2"
+thiserror = "1.0"
+kingfisher-vectorscan-sys = { version = "0.1.0", path = "../kingfisher-vectorscan-sys" }

@@ -1,0 +1,75 @@
+name: Publish crates
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      bootstrap:
+        description: Use CARGO_REGISTRY_TOKEN for the initial publication (select the version tag above)
+        type: boolean
+        default: false
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crates-io-publish
+  cancel-in-progress: false
+
+jobs:
+  check-release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Validate version tag
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          test "$REF_TYPE" = tag
+          python3 scripts/release.py "$RELEASE_TAG"
+
+  tests:
+    needs: check-release
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: crates-io
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87
+        with:
+          toolchain: 1.96.0
+      - run: sudo apt-get update && sudo apt-get install -y cmake g++ libboost-dev
+      - name: Verify sys archive before acquiring short-lived credentials
+        run: cargo package -p kingfisher-vectorscan-sys
+      - name: Authenticate sys publication
+        if: ${{ !inputs.bootstrap }}
+        id: auth-sys
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+      - name: Publish sys crate first
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          CARGO_REGISTRY_TOKEN: ${{ inputs.bootstrap && secrets.CARGO_REGISTRY_TOKEN || steps.auth-sys.outputs.token }}
+        run: python3 scripts/release.py "$RELEASE_TAG" --package kingfisher-vectorscan-sys
+      - name: Authenticate high-level publication
+        if: ${{ !inputs.bootstrap }}
+        id: auth-high
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+      - name: Publish high-level crate
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          CARGO_REGISTRY_TOKEN: ${{ inputs.bootstrap && secrets.CARGO_REGISTRY_TOKEN || steps.auth-high.outputs.token }}
+        run: python3 scripts/release.py "$RELEASE_TAG" --package kingfisher-vectorscan

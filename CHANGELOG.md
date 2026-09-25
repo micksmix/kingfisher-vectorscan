@@ -1,9 +1,28 @@
+# Fork 0.1.0 (unreleased)
+
+- Add Linux/macOS/Windows build workflows and a two-crate release workflow
+  with initial API-token publishing and subsequent crates.io Trusted Publishing.
+
+- Extract Kingfisher's vendored bindings into independent `kingfisher-vectorscan`
+  and `kingfisher-vectorscan-sys` packages.
+- Preserve Vectorscan 5.4.13 and the existing portability and serialization changes.
+- Include upstream provenance and license notices in both distributable crates.
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## Unreleased (Kingfisher vendored changes)
+
+- Updated the native Vectorscan source from 5.4.12 to 5.4.13 for both Rust crates;
+  the Rust API and upstream crate versions remain 0.0.6.
+- Preserved local build portability patches and regenerated the regex parser.
+- Made native guard-page regression tests portable to Windows using `VirtualAlloc`.
+- Track native sources and bindings in Cargo's build-script inputs so incremental
+  builds pick up vendored engine upgrades.
 
 ## [v0.0.6](https://github.com/bradlarsen/vectorscan-rs/releases/v0.0.6) (2026-03-12)
 
