@@ -188,10 +188,17 @@ fn build_source(target: &str) -> PathBuf {
         };
     }
 
-    let profile = match env("OPT_LEVEL").as_str() {
-        "0" => "Debug",
-        "s" | "z" => "MinSizeRel",
-        _ => "Release",
+    // Match the established Windows native build recipe even in Rust debug
+    // builds. Unoptimized MinGW builds of Vectorscan 5.4.13 can emit duplicate
+    // SuperVector copy-constructor definitions; the optimized build links cleanly.
+    let profile = if target.contains("windows") {
+        "Release"
+    } else {
+        match env("OPT_LEVEL").as_str() {
+            "0" => "Debug",
+            "s" | "z" => "MinSizeRel",
+            _ => "Release",
+        }
     };
 
     cfg.profile(profile)

@@ -17,6 +17,9 @@ Source checkouts have no release checksums yet and need the native build tools.
 The `build-from-source` feature (or `VECTORSCAN_BUILD_FROM_SOURCE=1`) also compiles
 the bundled source. Set `CC`, `CXX`, and `CMAKE_GENERATOR=MinGW Makefiles` for the
 chosen environment. Do not combine source options with `HYPERSCAN_ROOT`.
+Windows source builds use an optimized native Release configuration, including
+when the Rust wrapper is built in debug mode, matching the established recipe
+and avoiding duplicate template symbols in unoptimized MinGW builds.
 The following external-install recipe remains useful for custom native builds.
 
 From an MSYS2 MINGW64 shell (x64) or CLANGARM64 shell (ARM64), install the matching
