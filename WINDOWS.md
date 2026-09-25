@@ -10,8 +10,8 @@ CMake and Boost are only needed to build Vectorscan from source.
 Set `VECTORSCAN_PREBUILT_DIR` to use a downloaded release archive offline, or
 `HYPERSCAN_ROOT` to link your own compatible static installation. For MSVC,
 `HYPERSCAN_ROOT` must contain MSVC-compatible `lib/hs.lib` and headers; no automatic
-cross-ABI substitution is attempted. The explicit prefix replaces ambiguous
-vcpkg autodetection.
+cross-ABI substitution is attempted. The build script also checks standard vcpkg locations using the MSVC target
+architecture. It never selects MSVC libraries for a GNU/LLVM target.
 
 Source checkouts have no release checksums yet and need the native build tools.
 The `build-from-source` feature (or `VECTORSCAN_BUILD_FROM_SOURCE=1`) also compiles

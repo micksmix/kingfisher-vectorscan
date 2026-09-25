@@ -88,7 +88,7 @@ Build selection and overrides:
 Source checkouts have an empty release manifest and build from source. The
 publishing workflow fills the manifest from tested assets before packaging.
 Unsupported targets also use source builds, except MSVC, which requires an
-explicit `HYPERSCAN_ROOT`. A missing download or checksum failure is a hard error
+external installation via `HYPERSCAN_ROOT` or a matching vcpkg layout. A missing download or checksum failure is a hard error
 with override instructions; it never silently switches to compiling C++.
 
 Source builds need a C/C++ compiler, CMake, Make or Ninja, and Boost headers

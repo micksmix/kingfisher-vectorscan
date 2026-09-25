@@ -22,6 +22,8 @@ fn main() {
     }
     for name in [
         "HYPERSCAN_ROOT",
+        "VCPKG_ROOT",
+        "TEMP",
         "VECTORSCAN_BUILD_FROM_SOURCE",
         "VECTORSCAN_PREBUILT_DIR",
         "VECTORSCAN_OFFLINE",
@@ -53,7 +55,7 @@ fn main() {
     } else if !source {
         match prebuilt::install(include_str!("prebuilt-manifest.txt"), &env("CARGO_PKG_VERSION"), &target, &out) {
             Ok(Some(root)) => root,
-            Ok(None) => build_source(&target),
+            Ok(None) => find_vcpkg(&target).unwrap_or_else(|| build_source(&target)),
             Err(error) => panic!("Prebuilt Vectorscan: {error}. Use VECTORSCAN_PREBUILT_DIR for a verified local archive, HYPERSCAN_ROOT for an installed library, or VECTORSCAN_BUILD_FROM_SOURCE=1"),
         }
     } else {
@@ -90,6 +92,38 @@ fn main() {
         .expect("Failed to write bindings");
     #[cfg(not(feature = "bindgen"))]
     std::fs::copy("src/bindings.rs", out.join("bindings.rs")).expect("Failed to copy bindings");
+}
+
+// Preserve external MSVC installations without ever selecting MSVC libraries for
+// a GNU/LLVM target or selecting x64 libraries for ARM64.
+fn find_vcpkg(target: &str) -> Option<PathBuf> {
+    let architecture = match target {
+        "x86_64-pc-windows-msvc" => "x64",
+        "aarch64-pc-windows-msvc" => "arm64",
+        _ => return None,
+    };
+    let roots = [
+        std::env::var_os("VCPKG_ROOT").map(PathBuf::from),
+        std::env::var_os("TEMP").map(|path| PathBuf::from(path).join("vcpkg")),
+        Some(PathBuf::from(r"C:\vcpkg")),
+        Some(PathBuf::from(r"C:\dev\vcpkg")),
+    ];
+    for root in roots.into_iter().flatten() {
+        for triplet in [
+            format!("{architecture}-windows-static"),
+            format!("{architecture}-windows"),
+        ] {
+            let prefix = root.join("installed").join(triplet);
+            println!(
+                "cargo:rerun-if-changed={}",
+                prefix.join("lib/hs.lib").display()
+            );
+            if prefix.join("lib/hs.lib").is_file() {
+                return Some(prefix);
+            }
+        }
+    }
+    None
 }
 
 fn link_runtime(target: &str) {
@@ -230,7 +264,6 @@ fn build_source(target: &str) -> PathBuf {
     // configure-time probes can incorrectly miss posix_memalign/unistd.
     // Scope this workaround to musl targets only to avoid impacting
     // unrelated native dependencies.
-    let target = target.to_string();
     if target.ends_with("-musl") {
         cfg.define("HAVE_UNISTD_H", "1")
             .define("HAVE_POSIX_MEMALIGN", "1");
