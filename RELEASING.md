@@ -26,8 +26,9 @@ CI uses Rust 1.96.0. The inherited 1.73 manifest minimum remains unverified.
 3. In this GitHub repository, create an Actions environment named **crates-io**
    and store the token there as **CARGO_REGISTRY_TOKEN** (a repository Actions
    secret with that name also works). Do not commit or paste the token into chat.
-4. Once the initial CI run passes, create/push tag **v0.1.0** at the reviewed
-   commit. In Actions, run **Publish crates**, select that tag, and check
+4. Create/push tag **v0.1.0** at the reviewed commit to trigger **Publish crates**.
+   Tag-triggered runs use the bootstrap secret while it exists, and use OIDC
+   after the secret is removed. Manual runs can select the tag and check
    **bootstrap**. The workflow requires a tag matching both package versions,
    reruns CI, packages/verifies, and publishes the sys crate first.
 5. After both crates exist, configure Trusted Publishing below and revoke the
@@ -53,9 +54,9 @@ The workflow requests short-lived OIDC credentials with
 See https://crates.io/docs/trusted-publishing for current registry requirements.
 
 Update both package versions, the high-level sys dependency version, workspace
-version, and changelog together. Publish a GitHub release from the matching
-`vX.Y.Z` tag to trigger the workflow, or manually dispatch it against that tag
-with **bootstrap** unchecked. A tag push by itself does not trigger publication.
+version, and changelog together. Push the matching `vX.Y.Z` tag to trigger the workflow, or manually dispatch
+it against that tag with **bootstrap** unchecked. Creating a GitHub release
+for an already pushed tag does not trigger a second publication.
 
 Before release, review CI results and the declared minimum Rust version. Crates.io
 publication is permanent, and the sys crate must be indexed before the high-level
