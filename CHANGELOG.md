@@ -1,4 +1,4 @@
-# Unreleased
+# Fork 0.1.2
 
 - Add x86_64 and ARM64 Linux musl release archives, built and tested on Alpine.
 - Link the target's static libstdc++ when consuming musl archives; retain source

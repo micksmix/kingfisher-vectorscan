@@ -12,7 +12,7 @@ for target runtime requirements and offline/external-library overrides.
 
 ```toml
 [dependencies]
-kingfisher-vectorscan = "0.1.1"
+kingfisher-vectorscan = "0.1.2"
 ```
 
 Run `cargo build --release`. On supported targets, Cargo downloads and verifies
@@ -33,7 +33,7 @@ linked into MSVC projects. See the [Windows guide](https://github.com/micksmix/k
 
 ```toml
 [dependencies]
-kingfisher-vectorscan = { version = "0.1.1", features = ["build-from-source"] }
+kingfisher-vectorscan = { version = "0.1.2", features = ["build-from-source"] }
 ```
 
 Install a C/C++ compiler, CMake, Make or Ninja, and Boost headers, then run

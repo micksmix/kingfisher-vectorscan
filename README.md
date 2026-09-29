@@ -8,14 +8,14 @@ extracted from Kingfisher's vendored implementation. It has no Kingfisher depend
 and can be used in any Rust application that needs block or streaming regex matching.
 See [NOTICE](NOTICE) for attribution and exact source commits.
 
-One repository contains two crates, versioned `0.1.1`:
+One repository contains two crates, versioned `0.1.2`:
 
 - [`kingfisher-vectorscan`](kingfisher-vectorscan): ergonomic bindings, block and streaming scanners,
   and block database serialization/deserialization.
 - [`kingfisher-vectorscan-sys`](kingfisher-vectorscan-sys): raw FFI bindings and native build support,
   including vendored Vectorscan 5.4.13.
 
-Version 0.1.1 is published on crates.io:
+Version 0.1.2 is prepared for release. The previous version, 0.1.1, is published on crates.io:
 [kingfisher-vectorscan](https://crates.io/crates/kingfisher-vectorscan/0.1.1) and
 [kingfisher-vectorscan-sys](https://crates.io/crates/kingfisher-vectorscan-sys/0.1.1).
 
@@ -23,7 +23,7 @@ Version 0.1.1 is published on crates.io:
 
 ```toml
 [dependencies]
-kingfisher-vectorscan = "0.1.1"
+kingfisher-vectorscan = "0.1.2"
 ```
 
 Then run `cargo build --release` in your project. On the supported targets below,
@@ -57,7 +57,7 @@ Run the same example with `cargo run -p kingfisher-vectorscan --example scan`.
 Existing users can retain `vectorscan_rs` imports by aliasing the package:
 
 ```toml
-vectorscan-rs = { package = "kingfisher-vectorscan", version = "0.1.1" }
+vectorscan-rs = { package = "kingfisher-vectorscan", version = "0.1.2" }
 ```
 
 ## Build requirements and portability
@@ -68,7 +68,7 @@ Vectorscan archives from the matching GitHub release on these targets:
 | Target | Native runtime requirements |
 | --- | --- |
 | `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu` | Ubuntu 22.04 / glibc 2.35 baseline, GCC 11-compatible libstdc++ |
-| `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl` (next release) | Alpine 3.23 musl, GCC-compatible static libstdc++ and target C compiler |
+| `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl` (0.1.2+) | Alpine 3.23 musl, GCC-compatible static libstdc++ and target C compiler |
 | `x86_64-apple-darwin`, `aarch64-apple-darwin` | macOS 11+, Apple SDK/linker and system libc++ |
 | `x86_64-pc-windows-gnu` | MSYS2 MINGW64 linker and static GNU C++ runtime libraries |
 | `aarch64-pc-windows-gnullvm` | MSYS2 CLANGARM64 linker and static libc++/libc++abi/unwind libraries |
@@ -105,7 +105,7 @@ with override instructions; it never silently switches to compiling C++.
 
 ### Linux musl and Kingfisher
 
-The next release adds separate x86_64 and ARM64 musl archives. Version 0.1.1
+Version 0.1.2 adds separate x86_64 and ARM64 musl archives. Version 0.1.1
 has only GNU Linux archives and still needs a source build for musl. Archives
 are selected by the exact Rust target; a musl build never uses a glibc archive.
 
@@ -134,7 +134,7 @@ To compile the bundled native library in a consuming project, use:
 
 ```toml
 [dependencies]
-kingfisher-vectorscan = { version = "0.1.1", features = ["build-from-source"] }
+kingfisher-vectorscan = { version = "0.1.2", features = ["build-from-source"] }
 ```
 
 Then run `cargo build --release`. Alternatively, set

@@ -34,9 +34,8 @@ fails; complete/recover that release before retrying. Do not replace an asset
 already referenced by a published crate. A branch push only builds/tests and
 uploads workflow artifacts; it does not create releases or publish crates.
 
-The new musl assets require a new crate version and release tag: do not retrofit
-an existing published manifest. Bump both crates and their dependency together
-before publishing. Kingfisher's Alpine recipes can then stop forcing source
+The new musl assets are introduced in 0.1.2: publish them under the matching
+`v0.1.2` tag, without changing an existing published manifest. Kingfisher's Alpine recipes can then stop forcing source
 builds; its Zig recipes still need source builds unless configured with a
 compatible musl GCC runtime (see README.md).
 
