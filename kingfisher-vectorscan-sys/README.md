@@ -8,6 +8,11 @@ for macOS x64/ARM64, Linux GNU x64/ARM64, Windows GNU x64, and Windows LLVM ARM6
 Rust, the target linker/SDK, C++ runtime libraries, and `curl` are required;
 CMake and Boost are unnecessary when using an archive. Linux archives target
 Ubuntu 22.04 (glibc 2.35, GCC 11 libstdc++); macOS archives target macOS 11+.
+The next release also includes Linux musl x64/ARM64 archives built on Alpine
+3.23 with GCC. Consumers need a target C compiler and compatible static
+libstdc++; the build script locates and statically links that runtime. Version
+0.1.1 still requires source builds for musl. Zig/libc++ builds should keep using
+`VECTORSCAN_BUILD_FROM_SOURCE=1` unless a compatible GCC runtime is supplied.
 **Windows MSVC has no prebuilt archive and cannot compile the bundled source.**
 It requires an externally installed compatible MSVC static library; GNU/LLVM
 archives cannot be used with MSVC.

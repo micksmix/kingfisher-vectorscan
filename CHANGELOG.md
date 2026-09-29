@@ -1,3 +1,11 @@
+# Unreleased
+
+- Add x86_64 and ARM64 Linux musl release archives, built and tested on Alpine.
+- Link the target's static libstdc++ when consuming musl archives; retain source
+  builds for Zig/libc++ toolchains.
+- Require both musl archives in releases and verify static consumer executables
+  as well as the musl source-build override in CI.
+
 # Fork 0.1.1 (2026-09-25)
 
 - Use checksum-pinned GitHub native archives for published crates on Linux GNU,

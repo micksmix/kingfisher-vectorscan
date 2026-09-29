@@ -68,6 +68,7 @@ Vectorscan archives from the matching GitHub release on these targets:
 | Target | Native runtime requirements |
 | --- | --- |
 | `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu` | Ubuntu 22.04 / glibc 2.35 baseline, GCC 11-compatible libstdc++ |
+| `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl` (next release) | Alpine 3.23 musl, GCC-compatible static libstdc++ and target C compiler |
 | `x86_64-apple-darwin`, `aarch64-apple-darwin` | macOS 11+, Apple SDK/linker and system libc++ |
 | `x86_64-pc-windows-gnu` | MSYS2 MINGW64 linker and static GNU C++ runtime libraries |
 | `aarch64-pc-windows-gnullvm` | MSYS2 CLANGARM64 linker and static libc++/libc++abi/unwind libraries |
@@ -78,7 +79,7 @@ crate before extracting it under Cargo's `OUT_DIR`. It needs no CMake, Boost,
 Ragel, or Vectorscan compilation. Rust and the target's linker, SDK, and C++
 runtime development/linker libraries are still required. This does not eliminate native build
 requirements of other dependencies in an application such as Kingfisher.
-Windows MSVC and Linux musl do not have release archives; see [WINDOWS.md](WINDOWS.md)
+Windows MSVC does not have release archives; see [WINDOWS.md](WINDOWS.md)
 for Windows target selection and external MSVC libraries.
 
 Build selection and overrides:
@@ -101,6 +102,31 @@ publishing workflow fills the manifest from tested assets before packaging.
 Unsupported targets also use source builds, except MSVC, which requires an
 external installation via `HYPERSCAN_ROOT` or a matching vcpkg layout. A missing download or checksum failure is a hard error
 with override instructions; it never silently switches to compiling C++.
+
+### Linux musl and Kingfisher
+
+The next release adds separate x86_64 and ARM64 musl archives. Version 0.1.1
+has only GNU Linux archives and still needs a source build for musl. Archives
+are selected by the exact Rust target; a musl build never uses a glibc archive.
+
+The musl archives are built with GCC on Alpine 3.23. Consumers need the matching
+musl toolchain and static libstdc++ (Alpine's `gcc g++ musl-dev` packages), plus
+`curl` for downloads. CMake, Boost, and Ragel are not needed. The build script
+asks the target C compiler for `libstdc++.a` and links it statically. Cross builds
+must configure the target's `CC` and Rust linker, with that target's runtime
+installed; host glibc libraries are not compatible.
+
+After upgrading Kingfisher to a release containing these archives, its Alpine
+`linux-x64` and `linux-arm64` recipes can remove
+`VECTORSCAN_BUILD_FROM_SOURCE=1`. Keep native dependencies needed by other
+crates. The archive CI runs the Rust tests, packages the sys crate, and verifies
+that the example executable has no dynamic loader or shared-library dependencies.
+
+Kingfisher's Ubuntu `cargo zigbuild` recipes should retain the explicit source
+build unless a compatible musl GCC C++ runtime is supplied. Zig's libc++ is not
+an ABI-compatible substitute for the libstdc++ used by the release archives.
+`CXXSTDLIB` can override runtime linking for custom source/external builds; it
+cannot make a GCC archive compatible with libc++.
 
 ### Building Vectorscan yourself
 

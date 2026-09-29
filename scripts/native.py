@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SYS = ROOT / 'kingfisher-vectorscan-sys'
 TARGETS = (
     'x86_64-unknown-linux-gnu', 'aarch64-unknown-linux-gnu',
+    'x86_64-unknown-linux-musl', 'aarch64-unknown-linux-musl',
     'x86_64-apple-darwin', 'aarch64-apple-darwin',
     'x86_64-pc-windows-gnu', 'aarch64-pc-windows-gnullvm',
 )
@@ -30,6 +31,14 @@ def asset_name(target):
 
 
 def build(target, prefix):
+    if target.endswith('-musl'):
+        # These release assets use the GCC C++ ABI. Do not accidentally publish
+        # a host/glibc library under a musl filename when building manually.
+        for key, default in [('CC', 'cc'), ('CXX', 'c++')]:
+            compiler = os.environ.get(key) or default
+            machine = subprocess.check_output([compiler, '-dumpmachine'], text=True).strip()
+            if not machine.startswith(target.split('-')[0] + '-') or not machine.endswith('-musl'):
+                raise ValueError(f'{key}={compiler} targets {machine}, expected {target}')
     build_dir = ROOT / 'native-build' / target
     args = ['cmake', '-S', str(SYS / 'vectorscan'), '-B', str(build_dir),
             '-DCMAKE_BUILD_TYPE=Release', f'-DCMAKE_INSTALL_PREFIX={prefix}',

@@ -115,3 +115,33 @@ jobs:
           name: native-${{ matrix.target }}
           path: native-archives/*.tar.gz
           if-no-files-found: error
+
+  musl-archives:
+    name: Prebuilt (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      # Keep Actions on the glibc host; compile and run natively inside musl.
+      - name: Build and verify musl archive and source fallback
+        env:
+          NATIVE_TARGET: ${{ matrix.target }}
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src \
+            -e NATIVE_TARGET -e CARGO_INCREMENTAL=0 \
+            rust:1.96-alpine3.23 sh scripts/test-musl.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-${{ matrix.target }}
+          path: native-archives/*.tar.gz
+          if-no-files-found: error

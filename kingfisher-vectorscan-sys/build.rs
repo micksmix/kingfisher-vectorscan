@@ -50,11 +50,15 @@ fn main() {
         !(source && external.is_some()),
         "Source-build options conflict with HYPERSCAN_ROOT; unset it to compile the bundled source"
     );
+    let mut using_prebuilt = false;
     let root = if let Some(root) = external {
         root
     } else if !source {
         match prebuilt::install(include_str!("prebuilt-manifest.txt"), &env("CARGO_PKG_VERSION"), &target, &out) {
-            Ok(Some(root)) => root,
+            Ok(Some(root)) => {
+                using_prebuilt = true;
+                root
+            },
             Ok(None) => find_vcpkg(&target).unwrap_or_else(|| build_source(&target)),
             Err(error) => panic!("Prebuilt Vectorscan: {error}. Use VECTORSCAN_PREBUILT_DIR for a verified local archive, HYPERSCAN_ROOT for an installed library, or VECTORSCAN_BUILD_FROM_SOURCE=1"),
         }
@@ -77,7 +81,7 @@ fn main() {
         root.join("lib64").display()
     );
     println!("cargo:rustc-link-lib=static=hs");
-    link_runtime(&target);
+    link_runtime(&target, using_prebuilt);
     #[cfg(feature = "bindgen")]
     bindgen::Builder::default()
         .allowlist_function("hs_.*")
@@ -126,7 +130,7 @@ fn find_vcpkg(target: &str) -> Option<PathBuf> {
     None
 }
 
-fn link_runtime(target: &str) {
+fn link_runtime(target: &str, using_prebuilt: bool) {
     if target.ends_with("-msvc") {
         return;
     }
@@ -163,7 +167,29 @@ fn link_runtime(target: &str) {
         };
         let runtime = std::env::var("CXXSTDLIB").unwrap_or_else(|_| default.into());
         if !runtime.is_empty() {
-            println!("cargo:rustc-link-lib={runtime}");
+            if target.ends_with("-musl") && using_prebuilt {
+                // musl consumers (including Kingfisher) need a self-contained
+                // binary. Locate the target runtime, never the host's libstdc++.
+                let compiler = cc::Build::new().get_compiler();
+                let output = compiler
+                    .to_command()
+                    .arg(format!("-print-file-name=lib{runtime}.a"))
+                    .output()
+                    .expect("Failed to locate musl C++ runtime");
+                assert!(
+                    output.status.success(),
+                    "Runtime query failed for {runtime}"
+                );
+                let archive = PathBuf::from(String::from_utf8(output.stdout).unwrap().trim());
+                assert!(archive.is_file(), "Missing musl runtime {}. Install the target's static C++ runtime and configure CC for that target", archive.display());
+                println!(
+                    "cargo:rustc-link-search=native={}",
+                    archive.parent().unwrap().display()
+                );
+                println!("cargo:rustc-link-lib=static={runtime}");
+            } else {
+                println!("cargo:rustc-link-lib={runtime}");
+            }
         }
     }
 }

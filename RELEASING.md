@@ -11,9 +11,9 @@ attribution. Local `origin` uses the personal SSH alias
 ## Native archive pipeline (0.1.1+)
 
 `ci.yml` calls `native.yml`, which builds portable static Vectorscan archives for
-Linux GNU, macOS, and Windows GNU/LLVM, on x64 and ARM64 runners. Linux uses Ubuntu
-22.04; macOS has deployment target 11.0. CPU-native and optional SIMD specialization
-are disabled. Archives contain `lib/libhs.a`, headers, and license notices.
+Linux GNU and musl, macOS, and Windows GNU/LLVM, on x64 and ARM64 runners.
+GNU Linux uses Ubuntu 22.04; musl uses Rust 1.96 on Alpine 3.23 in Docker; macOS
+has deployment target 11.0. CPU-native and optional SIMD specialization are disabled. Archives contain `lib/libhs.a`, headers, and license notices.
 They deliberately do not redistribute toolchain C++ runtimes.
 
 Every archive is tested through the Rust APIs and `cargo package`, with an invalid
@@ -21,7 +21,7 @@ CMake/C++ compiler path and offline mode, so a source fallback fails the job.
 Regular CI continues to exercise source builds and the native suite. Tests use
 Rust 1.96.0; the inherited 1.73 minimum remains unverified.
 
-The tag-triggered publishing job downloads the six tested artifacts, creates a
+The tag-triggered publishing job downloads the eight tested artifacts, creates a
 GitHub release, embeds their SHA-256 hashes in
 `kingfisher-vectorscan-sys/prebuilt-manifest.txt`, and packages/publishes the crates.
 Only that generated manifest may differ from the tag when publishing. The crate
@@ -33,6 +33,12 @@ them. If a GitHub release exists but lacks a complete valid set, publication
 fails; complete/recover that release before retrying. Do not replace an asset
 already referenced by a published crate. A branch push only builds/tests and
 uploads workflow artifacts; it does not create releases or publish crates.
+
+The new musl assets require a new crate version and release tag: do not retrofit
+an existing published manifest. Bump both crates and their dependency together
+before publishing. Kingfisher's Alpine recipes can then stop forcing source
+builds; its Zig recipes still need source builds unless configured with a
+compatible musl GCC runtime (see README.md).
 
 Local archive testing, from the repository root:
 

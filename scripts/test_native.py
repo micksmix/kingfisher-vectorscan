@@ -4,10 +4,37 @@ from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
 import native
 
 
 class NativeReleaseTests(unittest.TestCase):
+    def test_release_requires_both_musl_archives(self):
+        musl = {'x86_64-unknown-linux-musl', 'aarch64-unknown-linux-musl'}
+        self.assertTrue(musl <= set(native.TARGETS))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for target in native.TARGETS:
+                (root / native.asset_name(target)).write_bytes(target.encode())
+            manifest = native.manifest(root, require_all=True)
+            for target in musl:
+                self.assertIn(f' {target} ', manifest)
+                asset = root / native.asset_name(target)
+                content = asset.read_bytes()
+                asset.unlink()
+                with self.assertRaises(ValueError):
+                    native.manifest(root, require_all=True)
+                asset.write_bytes(content)
+
+    def test_musl_build_rejects_wrong_toolchain(self):
+        for machine in ['x86_64-linux-gnu', 'aarch64-alpine-linux-musl']:
+            with self.subTest(machine=machine), patch.dict(native.os.environ, {}, clear=True), \
+                    patch.object(native.subprocess, 'check_output', return_value=machine), \
+                    patch.object(native.subprocess, 'run') as run:
+                with self.assertRaises(ValueError):
+                    native.build('x86_64-unknown-linux-musl', Path('/unused'))
+                run.assert_not_called()
+
     def test_archive_and_manifest(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
