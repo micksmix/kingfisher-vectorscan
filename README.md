@@ -8,7 +8,7 @@ extracted from Kingfisher's vendored implementation. It has no Kingfisher depend
 and can be used in any Rust application that needs block or streaming regex matching.
 See [NOTICE](NOTICE) for attribution and exact source commits.
 
-One repository contains two crates, versioned `0.1.3`:
+One repository contains two crates, preparing **0.1.4** (not yet published):
 
 - [`kingfisher-vectorscan`](kingfisher-vectorscan): ergonomic bindings, block and streaming scanners,
   and block database serialization/deserialization.
@@ -36,6 +36,15 @@ Rust crate. The target linker/SDK and C++ runtime libraries remain necessary.
 source builds using LLVM clang-cl with Microsoft's SDK/STL. `cl.exe` does not
 support the engine's GNU language extensions. Existing GNU/LLVM-MinGW targets
 remain supported and use distinct libraries. See [Windows setup](WINDOWS.md).
+
+The prepared **0.1.4** MSVC archives target **Visual Studio 2022 / MSVC 14.44**
+STL/CRT libraries, rather than the latest runner installation. They retain the
+existing optimized engine/SIMD settings and are tested with both VS 2022 and
+VS 2026 consumers. No STL-vectorization disabling workaround is used.
+Archive code generation uses independently pinned **clang-cl 22.1.3**: this keeps
+ARM64 scan performance while retaining the older Microsoft link/runtime baseline.
+Published 0.1.3 ARM64 archives remain immutable and need the newer 14.51 STL;
+use a matching toolset or a source build until the baseline-compatible release is published.
 
 ```rust
 use kingfisher_vectorscan::{BlockDatabase, BlockScanner, Flag, Pattern, Scan};
@@ -72,7 +81,7 @@ Vectorscan archives from the matching GitHub release on these targets:
 | `x86_64-apple-darwin`, `aarch64-apple-darwin` | macOS 11+, Apple SDK/linker and system libc++ |
 | `x86_64-pc-windows-gnu` | MSYS2 MINGW64 linker and static GNU C++ runtime libraries |
 | `aarch64-pc-windows-gnullvm` | MSYS2 CLANGARM64 linker and static libc++/libc++abi/unwind libraries |
-| `x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc` (0.1.3+) | Microsoft target SDK/linker and compatible C++ runtime; archives use `/MD` |
+| `x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc` (0.1.3+) | Microsoft target SDK/linker and C++ runtime; prepared 0.1.4 uses the VS 2022 / 14.44 baseline and `/MD` |
 
 A normal published-crate build downloads the archive with `curl` (included in
 macOS/Windows; install it on Linux) and verifies a SHA-256 hash embedded in the
@@ -171,6 +180,11 @@ cargo package -p kingfisher-vectorscan-sys --allow-dirty
 See [RELEASING.md](RELEASING.md) for publication order, GitHub fork setup, and
 Kingfisher migration. Branch CI builds/tests only; the separate release workflow
 publishes after its required tests pass and publishing authentication is configured.
+
+For repeatable synthetic performance checks, run
+`cargo run --release -p kingfisher-vectorscan --example throughput -- 1000`.
+It reports compile time and no-match/sparse/dense block-scan throughput. Compare
+the same compiler, corpus, host and archive ABI; emulated x64 is not native x64 hardware evidence.
 
 ## License
 

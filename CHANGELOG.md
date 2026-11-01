@@ -1,3 +1,15 @@
+# Fork 0.1.4 (prepared, not published)
+
+- Pin Windows MSVC release archive production to Visual Studio 2022 / MSVC 14.44
+  while retaining existing optimized engine and SIMD settings.
+- Pin archive code generation independently to clang-cl 22.1.3 to preserve ARM64
+  throughput with the older STL/CRT baseline; reject regression-prone older compilers.
+- Add explicit local IDE/toolset selection, signed side-by-side baseline setup,
+  toolset-drift rejection, library-bound archive build metadata and VS 2026 consumer CI.
+- Add a repeatable synthetic compile/scan throughput example for comparing archives.
+- Isolate compiler-specific CMake caches and reject a reset to Debug/unoptimized archives.
+- Preserve published 0.1.3 assets and hashes; no STL/SIMD disabling workaround is used.
+
 # Fork 0.1.3
 
 - Add MSVC-ABI x64/ARM64 source builds with clang-cl, Microsoft SDK/STL and Ninja,

@@ -12,6 +12,25 @@ with the **Microsoft SDK, STL and ABI**, not `cl.exe`. The resulting static
 `lib/hs.lib` can be consumed by MSVC Rust projects and Node-API addons. MinGW
 GNU/LLVM archives are not MSVC-compatible and must never be substituted.
 
+### Stable archive baseline (prepared 0.1.4)
+
+New release archives are built with **Visual Studio 2022 / MSVC 14.44**, not
+`vswhere -latest`. This avoids newer ARM64 STL helper references that older
+14.44 libraries cannot link. The producer rejects a different VS/toolset and
+archives authenticated `lib/build-toolchain.json` metadata tied to the library hash.
+VS 2026 consumers are tested separately against the same baseline archives.
+
+No engine optimization or SIMD flag is reduced, and no
+`_USE_STD_VECTOR_ALGORITHMS=0` workaround is introduced. Source builds may still
+select another installed toolset explicitly; archive production stays pinned.
+Published 0.1.3 ARM64 assets still require MSVC 14.51 libraries and are not replaced.
+
+The compiler and STL baseline are independent: archive production uses
+**clang-cl 22.1.3** with **MSVC 14.44** headers/libraries. clang 19.1.5 was rejected
+after measurable ARM64 throughput regressions; changing the STL baseline does
+not require downgrading LLVM code generation. `install-msvc-llvm.ps1` downloads
+the exact LLVM release installer and verifies its pinned SHA-256 before running it.
+
 Install Visual Studio 2022 C++ Build Tools, its x64/ARM64 tools and LLVM/Clang
 components, a Windows SDK, CMake, Ninja and standalone Boost headers. Do not add
 a MinGW include root as Boost's include directory: its CRT headers contaminate
@@ -23,7 +42,8 @@ From a PowerShell session in this checkout:
 ```powershell
 rustup target add aarch64-pc-windows-msvc x86_64-pc-windows-msvc
 $env:BOOST_ROOT = 'C:\native\boost_1_88_0'
-. ./scripts/msvc-env.ps1 -Target aarch64-pc-windows-msvc
+./scripts/install-msvc-llvm.ps1
+. ./scripts/msvc-env.ps1 -Target aarch64-pc-windows-msvc -VisualStudio 2022 -Toolset 14.44 -ClangCl $env:KINGFISHER_ARCHIVE_CLANG_CL
 cargo test --workspace --all-targets --features build-from-source
 ```
 
@@ -32,6 +52,16 @@ SDK environment and clang-cl/Ninja; it does not install dependencies. Cargo's
 MSVC source path defaults to Ninja and clang-cl, selecting the target rather than
 the host architecture. Windows native code is built in Release even for Rust
 debug builds. Native tests use `kingfisher-vectorscan-sys/unit_hyperscan`.
+
+For an ordinary source build with a newer installed IDE, select
+`-VisualStudio 2026` and omit `-Toolset`; omitting both retains automatic local
+discovery. To provision the archive baseline, run `./scripts/install-msvc-baseline.ps1`.
+It installs VS 2022 side-by-side if necessary and verifies Microsoft's installer
+signature. It never uninstalls a newer IDE or automatically restarts Windows.
+
+`-ClangCl <absolute-clang-cl.exe-path>` selects LLVM independently of the IDE
+without replacing its selected SDK/STL. `test-msvc.ps1` accepts that argument and
+defaults to the compiler exported by `install-msvc-llvm.ps1`.
 
 Native executable/test targets reserve an 8 MiB stack, matching common Unix
 defaults for deeply recursive compiler regression cases. A static library cannot
@@ -51,6 +81,27 @@ To build a separate prefix or verify a complete MSVC workflow:
 python scripts/native.py build --target aarch64-pc-windows-msvc --prefix C:\native\vectorscan-arm64
 ./scripts/test-msvc.ps1 -Target aarch64-pc-windows-msvc -NativeSuite
 ```
+
+After generating the local archive manifest, verify the same archive with a
+newer consumer (fresh target directory, no native C++/CMake fallback):
+
+```powershell
+python scripts/native.py manifest
+./scripts/test-msvc-consumer.ps1 -Target aarch64-pc-windows-msvc -VisualStudio 2026
+```
+
+Use `-VisualStudio 2022 -Toolset 14.44` to exercise a separate baseline consumer.
+The throughput example uses only synthetic data and keeps its match counts fixed
+while measuring optimized no-match, sparse-match and dense-match workloads.
+
+Archive build directories are keyed by compiler identity, and their CMake cache
+must retain optimized `Release` and `/MD`. Switching compilers must not reset the
+build silently to Debug or publish an unoptimized library.
+
+On Windows, keep the Cargo target directory short for native source/unit builds
+if the SDK resource compiler reports an overlong `embed.manifest`/object path:
+set `$env:CARGO_TARGET_DIR = 'C:\kf-native-target'` before building. This is a
+build-tool path limit, not a reason to disable native tests or optimization.
 
 The verification script checks archive use with deliberately invalid C++/CMake
 commands, packaged-crate verification, source builds and the native suite. It

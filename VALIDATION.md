@@ -1,5 +1,68 @@
 # Local preparation checks
 
+## VS 2022 archive baseline, 2026-11-01
+
+Prepared version: **0.1.4**, not published. Environment: VMware Fusion Windows
+11 ARM64, Rust 1.99.0, VS 2022 / MSVC **14.44.35207**, and checksum-verified
+**Boost 1.88.0** matching release CI. The initial correctness run used clang-cl
+**19.1.5**; the accepted performance configuration uses **22.1.3**. ARM64 ran natively;
+x64 ran under Windows emulation. VS 2026 / MSVC **14.51.36231** remained installed
+side-by-side for newer-consumer checks; no IDE/runtime uninstall was needed.
+
+The initial correctness run passed on both MSVC target architectures:
+
+- Optimized native archive production with the existing engine/SIMD flags unchanged.
+- Baseline-drift checks and library-hash-bound `lib/build-toolchain.json` archive metadata.
+- Source and prebuilt Rust tests, scan example and independently verified sys-crate package.
+- Complete public native suite and **14,162 internal native tests** per architecture.
+- The same Boost 1.88 / MSVC 14.44 archives consumed with separately selected
+  VS 2022 **14.44** and VS 2026 **14.51** SDK/STL environments, in toolset-keyed
+  consumer target directories with deliberately invalid native C++/CMake commands.
+- Selector isolation **14.44 → 14.51 → 14.44** without retaining old STL paths.
+
+An initial transport-disconnected Boost 1.88 run was **not** counted as passed.
+The successful rerun retained guest stdout/stderr logs and returned exit code zero.
+An earlier Boost 1.90 local pass was superseded by the release-matching 1.88 run.
+
+macOS ARM64 checks passed: workspace/all-target tests, Clippy with warnings denied,
+optimized synthetic throughput example, and fresh verified package archives for
+both crates. Release-helper tests, PowerShell parsing, actionlint and local doc links passed.
+The inherited Rust 1.73 minimum, native x64 hardware and full ten-target release
+CI remain outside this local verification. Published 0.1.3 assets/hashes were not changed.
+
+Performance comparison uses the same synthetic Rust source and Rust compiler,
+five alternating trials per archive/architecture, and no concurrent guest builds.
+The accepted clang 22 results are recorded below; no further performance workaround
+or benchmark rerun is required for this change.
+
+The first candidate (clang-cl 19.1.5, Boost 1.88, MSVC 14.44) **failed the performance
+acceptance check** despite passing correctness/ABI tests. Relative to published
+0.1.3, median ARM64 throughput changed by -35.89% (no match), -36.56% (sparse),
+and -12.25% (dense); x64 emulation changed by -1.74%, -3.57%, and +0.42%.
+That clang 19 candidate must not be treated as release-ready or performance-equivalent.
+The selected clang-cl 22.1.3 code generator keeps the same VS 2022 / 14.44
+SDK/STL and unchanged optimization settings; no SIMD/STL disabling workaround is used.
+
+The **clang-cl 22.1.3 / MSVC 14.44 / Boost 1.88** candidate passed old/new SDK
+consumer checks and resolved the large throughput regression. Five alternating
+optimized trials per archive/architecture produced these median MiB/s values:
+
+| Architecture / workload | Published 0.1.3 | 14.44 + clang 22 candidate | Change |
+| --- | ---: | ---: | ---: |
+| ARM64 native / no match | 975.328 | 963.021 | -1.26% |
+| ARM64 native / sparse | 975.884 | 977.553 | +0.17% |
+| ARM64 native / dense | 423.665 | 421.597 | -0.49% |
+| x64 emulated / no match | 981.360 | 980.162 | -0.12% |
+| x64 emulated / sparse | 965.347 | 975.054 | +1.01% |
+| x64 emulated / dense | 193.039 | 194.662 | +0.84% |
+
+Database size was identical (**663,720 bytes**), as were matches per scan
+(0 / 119 / 239,675). Median compile time was 150.965 → 150.890 ms on ARM64
+and 441.779 → 447.208 ms under x64 emulation. These are local synthetic VM
+measurements, not an absolute guarantee for all corpora/CPUs; no large or
+consistent scan regression remained. Exact pinned-compiler native suites still
+need completion before treating this candidate as fully verified.
+
 ## MSVC preparation, 2026-10-31
 
 Validated version: **0.1.3**. Test environment: VMware Fusion,

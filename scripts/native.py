@@ -2,7 +2,9 @@
 import argparse
 import gzip
 import hashlib
+import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import tarfile
@@ -20,6 +22,49 @@ TARGETS = (
     'x86_64-pc-windows-gnu', 'aarch64-pc-windows-gnullvm',
     'x86_64-pc-windows-msvc', 'aarch64-pc-windows-msvc',
 )
+MSVC_TOOLCHAIN_FILE = 'lib/build-toolchain.json'
+MSVC_CLANG_VERSION = '22.1.3'
+
+
+def msvc_archive_environment():
+    """Release archives use a stable STL/CRT baseline, not the newest runner IDE."""
+    visual_studio = os.environ.get('VisualStudioVersion', '')
+    toolset = os.environ.get('VCToolsVersion', '').rstrip('\\/')
+    if not visual_studio.startswith('17.') or not toolset.startswith('14.44.'):
+        raise ValueError('MSVC archives require Visual Studio 2022 / MSVC 14.44; '
+                         'run scripts/msvc-env.ps1 -Target <target> -VisualStudio 2022 -Toolset 14.44')
+    compiler = os.environ.get('CXX') or 'clang-cl'
+    description = subprocess.check_output([compiler, '--version'], text=True)
+    found = re.search(r'clang version ([0-9.]+)', description)
+    if not found or found.group(1) != MSVC_CLANG_VERSION:
+        raise ValueError(f'MSVC archives require clang-cl {MSVC_CLANG_VERSION} for optimized ARM64 code generation; '
+                         'run scripts/install-msvc-llvm.ps1 and pass its compiler to msvc-env.ps1 -ClangCl')
+    return {'format': 1, 'visual_studio_version': visual_studio,
+            'msvc_toolset': toolset, 'runtime': 'MD', 'clang_version': MSVC_CLANG_VERSION}
+
+
+def msvc_archive_toolchain(prefix, target):
+    metadata = json.loads((prefix / MSVC_TOOLCHAIN_FILE).read_text())
+    if (metadata.get('format') != 1 or metadata.get('target') != target
+            or not metadata.get('visual_studio_version', '').startswith('17.')
+            or not metadata.get('msvc_toolset', '').startswith('14.44.')
+            or metadata.get('runtime') != 'MD'
+            or metadata.get('clang_version') != MSVC_CLANG_VERSION
+            or metadata.get('library_sha256') != hashlib.sha256((prefix / 'lib/hs.lib').read_bytes()).hexdigest()):
+        raise ValueError('MSVC archive toolchain metadata does not match the VS 2022 / 14.44 library build')
+    return metadata
+
+
+def verify_msvc_release_cache(build_dir):
+    values = {}
+    for line in (build_dir / 'CMakeCache.txt').read_text().splitlines():
+        if not line or line.startswith(('#', '//')) or '=' not in line or ':' not in line:
+            continue
+        key, value = line.split('=', 1)
+        values[key.split(':', 1)[0]] = value
+    if (values.get('CMAKE_BUILD_TYPE', '').lower() != 'release'
+            or values.get('CMAKE_MSVC_RUNTIME_LIBRARY') != 'MultiThreadedDLL'):
+        raise ValueError('MSVC archive configuration lost its optimized Release /MD settings')
 
 
 def version():
@@ -36,6 +81,7 @@ def library_path(target):
 
 
 def build(target, prefix):
+    toolchain = msvc_archive_environment() if target.endswith('-msvc') else None
     if target.endswith('-musl'):
         # These release assets use the GCC C++ ABI. Do not accidentally publish
         # a host/glibc library under a musl filename when building manually.
@@ -45,6 +91,12 @@ def build(target, prefix):
             if not machine.startswith(target.split('-')[0] + '-') or not machine.endswith('-musl'):
                 raise ValueError(f'{key}={compiler} targets {machine}, expected {target}')
     build_dir = ROOT / 'native-build' / target
+    if toolchain is not None:
+        # CMake deletes cache settings when a compiler path changes. Isolate the
+        # compiler identity so switching LLVM cannot silently reset Release to Debug.
+        compiler = '\0'.join(os.environ.get(key, 'clang-cl') for key in ('CC', 'CXX'))
+        identity = hashlib.sha256(compiler.encode()).hexdigest()[:12]
+        build_dir /= f"msvc-{toolchain['msvc_toolset']}-{identity}"
     args = ['cmake', '-S', str(SYS / 'vectorscan'), '-B', str(build_dir),
             '-DCMAKE_BUILD_TYPE=Release', f'-DCMAKE_INSTALL_PREFIX={prefix}',
             '-DCMAKE_INSTALL_LIBDIR=lib', '-DCMAKE_INSTALL_INCLUDEDIR=include',
@@ -71,9 +123,14 @@ def build(target, prefix):
     if 'apple' in target:
         args.append('-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0')
     subprocess.run(args, check=True)
+    if toolchain is not None:
+        verify_msvc_release_cache(build_dir)
     subprocess.run(['cmake', '--build', str(build_dir), '--config', 'Release',
                     '--parallel', '4'], check=True)
     subprocess.run(['cmake', '--install', str(build_dir), '--config', 'Release'], check=True)
+    if toolchain is not None:
+        toolchain.update(target=target, library_sha256=hashlib.sha256((prefix / 'lib/hs.lib').read_bytes()).hexdigest())
+        (prefix / MSVC_TOOLCHAIN_FILE).write_text(json.dumps(toolchain, sort_keys=True, indent=2) + '\n')
 
 
 def pack(target, prefix, output):
@@ -85,6 +142,9 @@ def pack(target, prefix, output):
     output.mkdir(parents=True, exist_ok=True)
     destination = output / asset_name(target)
     files = [(prefix / library, library)]
+    if target.endswith('-msvc'):
+        msvc_archive_toolchain(prefix, target)
+        files.append((prefix / MSVC_TOOLCHAIN_FILE, MSVC_TOOLCHAIN_FILE))
     files += [(p, p.relative_to(prefix).as_posix()) for p in sorted((prefix / 'include/hs').glob('*.h'))]
     files += [(SYS / name, f'licenses/{name}') for name in ('NOTICE', 'LICENSE-VECTORSCAN', 'LICENSE-MIT', 'LICENSE-APACHE')]
     # Fixed metadata makes packaging deterministic for the same compiled inputs.
