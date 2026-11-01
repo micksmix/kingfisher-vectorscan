@@ -26,6 +26,10 @@ endif()
 
 message(STATUS "Boost version: ${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
 
+if(MSVC AND EXISTS "${Boost_INCLUDE_DIR}/_mingw.h")
+    message(FATAL_ERROR "MSVC ABI builds need standalone Boost headers, not a MinGW include directory containing CRT headers. Copy only the boost directory into a separate include root or install a standalone Boost distribution.")
+endif()
+
 # Boost 1.62 has a bug that we've patched around, check if it is required
 if (Boost_VERSION EQUAL 106200)
     set (CMAKE_REQUIRED_INCLUDES ${BOOST_INCLUDEDIR} "${PROJECT_SOURCE_DIR}/include")

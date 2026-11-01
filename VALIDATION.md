@@ -1,5 +1,35 @@
 # Local preparation checks
 
+## MSVC preparation, 2026-10-31
+
+Validated version: **0.1.3**. Test environment: VMware Fusion,
+Windows 11 ARM64, Rust 1.99.0, Visual Studio 2022 Build Tools and LLVM clang-cl
+19.1.5 with standalone Boost headers. ARM64 executables ran natively; x64
+executables ran under Windows emulation, not on native x64 hardware.
+
+Passed for both `aarch64-pc-windows-msvc` and `x86_64-pc-windows-msvc`:
+
+- Portable Microsoft-ABI source compilation and COFF `lib/hs.lib` archive generation.
+- Prebuilt archive tests with deliberately invalid C++/CMake commands, the Rust
+  consumer example, and sys-crate archive verification with Cargo.
+- Cargo `build-from-source` tests: 10 high-level, 4 FFI layout and 3 archive tests.
+- The complete public native suite through `unit_hyperscan`, including the deep
+  `regression.UE_2595` case after reserving an 8 MiB executable stack.
+- All **14,162 internal native tests** on each architecture.
+
+macOS ARM64 Rust 1.99 checks also passed: workspace/all-target Rust tests, release
+build with the public native suite, formatting, release-helper tests, actionlint,
+and fresh Cargo package verification for both crates. The high-level package
+used an explicit local sys-crate override for 0.1.3.
+
+No native regression was removed or skipped to obtain these results. Native x64
+CI, the older Rust 1.73 minimum, optional CPU/AVX/SVE specialization and the
+static-CRT source path remain unverified by this local run. All ten release
+archive targets must pass CI before publication; previous release assets remain
+immutable. See [Windows setup](WINDOWS.md) and [release guidance](RELEASING.md).
+
+## Initial extraction checks (historical)
+
 Environment: macOS ARM64, Rust 1.96.0.
 
 Passed:

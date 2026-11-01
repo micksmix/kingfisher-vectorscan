@@ -88,6 +88,10 @@ void aligned_free_internal(void *ptr) {
 
 #if defined(__MINGW32__) || defined(__MINGW64__)
     __mingw_aligned_free(ptr);
+#elif !defined(HAVE_POSIX_MEMALIGN) && !defined(HAVE_MEMALIGN) && defined(HAVE__ALIGNED_MALLOC)
+    // Microsoft aligned allocations carry bookkeeping before the returned
+    // pointer and must never be passed to the ordinary CRT free().
+    _aligned_free(ptr);
 #else
     free(ptr);
 #endif

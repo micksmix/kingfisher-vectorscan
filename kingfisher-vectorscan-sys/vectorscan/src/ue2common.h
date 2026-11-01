@@ -92,7 +92,10 @@ typedef u32 ReportID;
 /** no, seriously, inline it, even if building in debug mode */
 #define really_really_inline inline __attribute__ ((always_inline, unused))
 #define never_inline __attribute__ ((noinline))
+/* C++11 has a real alignof keyword; the Microsoft STL rejects keyword macros. */
+#ifndef __cplusplus
 #define alignof __alignof
+#endif
 #define HAVE_TYPEOF 1
 
 

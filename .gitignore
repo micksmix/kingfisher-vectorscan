@@ -25,3 +25,6 @@ __pycache__/
 native-install/
 native-archives/
 native-canonical/
+
+# Local code intelligence index
+.codegraph/

@@ -13,15 +13,18 @@ Version 0.1.2 also includes Linux musl x64/ARM64 archives built on Alpine
 libstdc++; the build script locates and statically links that runtime. Version
 0.1.1 still requires source builds for musl. Zig/libc++ builds should keep using
 `VECTORSCAN_BUILD_FROM_SOURCE=1` unless a compatible GCC runtime is supplied.
-**Windows MSVC has no prebuilt archive and cannot compile the bundled source.**
-It requires an externally installed compatible MSVC static library; GNU/LLVM
-archives cannot be used with MSVC.
+Version 0.1.3 adds MSVC x64/ARM64 archive targets and source builds using LLVM
+clang-cl, Microsoft's SDK/STL, Ninja and standalone Boost headers. `cl.exe`
+cannot compile the engine's GNU extensions. MSVC archives contain `lib/hs.lib`
+and use `/MD`; `crt-static` consumers select a matching `/MT` source build.
+GNU/LLVM-MinGW libraries cannot be linked into MSVC projects.
 
 `HYPERSCAN_ROOT` selects an installed static library and headers on any platform.
 Use `build-from-source` or `VECTORSCAN_BUILD_FROM_SOURCE=1` for the bundled source.
 CPU specialization, native tests, and ASan force source builds. These source
 options conflict with `HYPERSCAN_ROOT`. Source checkouts and targets without
-archives compile the bundled source; MSVC requires a compatible external installation via `HYPERSCAN_ROOT` or a matching vcpkg layout.
+archives compile the bundled source, including x64/ARM64 MSVC through clang-cl.
+MSVC external installations and matching vcpkg layouts remain supported.
 
 For offline builds, place the original release archive in `VECTORSCAN_PREBUILT_DIR`
 and set `VECTORSCAN_OFFLINE=1`. `CARGO_NET_OFFLINE=true` is also honored; Cargo's
@@ -37,7 +40,7 @@ and [Windows guide](https://github.com/micksmix/kingfisher-vectorscan/blob/main/
 
 ```toml
 [dependencies]
-kingfisher-vectorscan-sys = "0.1.2"
+kingfisher-vectorscan-sys = "0.1.3"
 ```
 
 Run `cargo build --release`. On the supported targets above, this automatically
@@ -51,18 +54,19 @@ To build the bundled library yourself, change the dependency to:
 
 ```toml
 [dependencies]
-kingfisher-vectorscan-sys = { version = "0.1.2", features = ["build-from-source"] }
+kingfisher-vectorscan-sys = { version = "0.1.3", features = ["build-from-source"] }
 ```
 
-Install the following dependencies and run `cargo build --release`. This does
-not enable MSVC source builds; see the Windows guide above.
+Install the following dependencies and run `cargo build --release`. MSVC source
+builds also need clang-cl and Microsoft's C++ SDK; see the Windows guide above.
 
 - C/C++ compiler and Make or Ninja
 - [Boost](https://boost.org) >= 1.57
 - [CMake](https://cmake.org)
 - Optional: [Clang](https://clang.llvm.org), when building with the `gen` feature
 
-CI exercises Linux and macOS on x64/ARM64 and both supported Windows targets.
+CI exercises Linux and macOS on x64/ARM64 and Windows GNU/LLVM and MSVC targets
+on both architectures.
 
 
 ## Implementation Notes

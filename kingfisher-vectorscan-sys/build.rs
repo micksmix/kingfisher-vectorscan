@@ -29,11 +29,19 @@ fn main() {
         "VECTORSCAN_OFFLINE",
         "CARGO_NET_OFFLINE",
         "CXXSTDLIB",
+        "CARGO_CFG_TARGET_FEATURE",
     ] {
         println!("cargo:rerun-if-env-changed={name}");
     }
     let target = env("TARGET");
     let out = PathBuf::from(env("OUT_DIR"));
+    // Release MSVC archives use the normal dynamic Microsoft CRT. A static-CRT
+    // consumer needs a matching native build rather than mixing /MD and /MT.
+    let static_msvc_crt = target.ends_with("-msvc")
+        && std::env::var("CARGO_CFG_TARGET_FEATURE")
+            .unwrap_or_default()
+            .split(',')
+            .any(|feature| feature == "crt-static");
     let source = cfg!(feature = "build-from-source")
         || cfg!(feature = "cpu_native")
         || cfg!(feature = "simd_specialization")
@@ -53,7 +61,7 @@ fn main() {
     let mut using_prebuilt = false;
     let root = if let Some(root) = external {
         root
-    } else if !source {
+    } else if !source && !static_msvc_crt {
         match prebuilt::install(include_str!("prebuilt-manifest.txt"), &env("CARGO_PKG_VERSION"), &target, &out) {
             Ok(Some(root)) => {
                 using_prebuilt = true;
@@ -195,11 +203,39 @@ fn link_runtime(target: &str, using_prebuilt: bool) {
 }
 
 fn build_source(target: &str) -> PathBuf {
-    assert!(!target.ends_with("-msvc"), "Bundled source builds do not support MSVC; set HYPERSCAN_ROOT to a compatible MSVC static library, or use a supported Windows GNU/LLVM Rust target");
     let vectorscan_src_dir = PathBuf::from(env("CARGO_MANIFEST_DIR")).join("vectorscan");
     let out_dir = PathBuf::from(env("OUT_DIR"));
     let include_dir = out_dir.join("include");
     let mut cfg = cmake::Config::new(&vectorscan_src_dir);
+
+    if target.ends_with("-msvc") {
+        assert!(
+            matches!(target, "x86_64-pc-windows-msvc" | "aarch64-pc-windows-msvc"),
+            "Bundled MSVC builds support x64 and ARM64 only"
+        );
+        // Vectorscan requires GNU language extensions. clang-cl preserves them
+        // while emitting the Microsoft ABI, COFF archives, and Microsoft CRT
+        // dependencies. CMake/cc discover the target Visual Studio SDK environment.
+        let static_crt = std::env::var("CARGO_CFG_TARGET_FEATURE")
+            .unwrap_or_default()
+            .split(',')
+            .any(|feature| feature == "crt-static");
+        cfg.generator("Ninja")
+            .define("CMAKE_C_COMPILER", "clang-cl")
+            .define("CMAKE_CXX_COMPILER", "clang-cl")
+            .define("CMAKE_C_COMPILER_TARGET", target)
+            .define("CMAKE_CXX_COMPILER_TARGET", target)
+            .define("CMAKE_C_FLAGS", "")
+            .define("CMAKE_CXX_FLAGS", "")
+            .define(
+                "CMAKE_MSVC_RUNTIME_LIBRARY",
+                if static_crt {
+                    "MultiThreaded"
+                } else {
+                    "MultiThreadedDLL"
+                },
+            );
+    }
 
     macro_rules! cfg_define_feature {
         ($cmake_feature: tt, $cargo_feature: tt) => {

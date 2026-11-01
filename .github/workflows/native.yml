@@ -116,6 +116,45 @@ jobs:
           path: native-archives/*.tar.gz
           if-no-files-found: error
 
+  msvc-archives:
+    name: Prebuilt (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            target: x86_64-pc-windows-msvc
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87
+        with:
+          toolchain: 1.96.0
+          targets: ${{ matrix.target }}
+      - name: Install Boost headers
+        shell: pwsh
+        run: |
+          $env:BOOST_ROOT = Join-Path $env:RUNNER_TEMP 'boost'
+          $archive = Join-Path $env:RUNNER_TEMP 'boost_1_88_0.zip'
+          Invoke-WebRequest 'https://archives.boost.io/release/1.88.0/source/boost_1_88_0.zip' -OutFile $archive
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '8ee21476f1aca1978339f0f4a218b9b8a6746eec83070f32630f97b09c7e91b7') { throw 'Boost archive checksum mismatch' }
+          Expand-Archive $archive -DestinationPath $env:BOOST_ROOT
+          $env:BOOST_ROOT = Join-Path $env:BOOST_ROOT 'boost_1_88_0'
+          "BOOST_ROOT=$env:BOOST_ROOT" >> $env:GITHUB_ENV
+      - name: Verify archive, source build, native suite and packaged crate
+        shell: pwsh
+        run: ./scripts/test-msvc.ps1 -Target '${{ matrix.target }}' -NativeSuite
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-${{ matrix.target }}
+          path: native-archives/*.tar.gz
+          if-no-files-found: error
+
   musl-archives:
     name: Prebuilt (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
