@@ -30,6 +30,12 @@ try {
     $env:VECTORSCAN_OFFLINE = '1'
     $env:CXX = 'vectorscan-cxx-must-not-run'
     $env:CMAKE = 'vectorscan-cmake-must-not-run'
+    # This library does not commit Cargo.lock; bootstrap fresh checkouts once,
+    # then keep all consumer commands locked to that dependency resolution.
+    if (-not (Test-Path -LiteralPath (Join-Path $root 'Cargo.lock'))) {
+        & cargo generate-lockfile
+        if ($LASTEXITCODE -ne 0) { throw 'MSVC baseline archive consumer lockfile generation failed' }
+    }
     & cargo test --locked --workspace --all-targets
     if ($LASTEXITCODE -ne 0) { throw 'MSVC baseline archive consumer tests failed' }
     & cargo run --locked -p kingfisher-vectorscan --example scan
