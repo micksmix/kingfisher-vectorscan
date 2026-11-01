@@ -1,6 +1,8 @@
 """Exercise archive provenance and publication completeness without network access."""
 import hashlib
 from pathlib import Path
+import shutil
+import subprocess
 import tarfile
 import tempfile
 import unittest
@@ -9,6 +11,39 @@ import native
 
 
 class NativeReleaseTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which('pwsh'), 'PowerShell is required for MSVC compiler discovery tests')
+    def test_msvc_llvm_selection_uses_host_architecture(self):
+        script = Path(__file__).with_name('find-msvc-llvm.ps1')
+        cases = [
+            ('X64', ('arm64', 'x64', 'generic', 'standalone'), 'x64'),
+            ('Arm64', ('arm64', 'x64', 'generic', 'standalone'), 'arm64'),
+            ('Arm64', ('x64', 'generic', 'standalone'), 'x64'),
+            ('X64', ('arm64', 'generic', 'standalone'), 'generic'),
+            ('X64', ('arm64', 'standalone'), 'standalone'),
+            ('Arm64', ('standalone',), 'standalone'),
+            ('X64', ('arm64',), None),
+        ]
+        for host, available, expected in cases:
+            with self.subTest(host=host, available=available), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                installation = root / 'Visual Studio'
+                program_files = root / 'Program Files'
+                directories = {
+                    'arm64': installation / 'VC/Tools/Llvm/ARM64/bin',
+                    'x64': installation / 'VC/Tools/Llvm/x64/bin',
+                    'generic': installation / 'VC/Tools/Llvm/bin',
+                    'standalone': program_files / 'LLVM/bin',
+                }
+                for toolset in available:
+                    directories[toolset].mkdir(parents=True, exist_ok=True)
+                    (directories[toolset] / 'clang-cl.exe').write_bytes(b'compiler')
+                result = subprocess.run([
+                    shutil.which('pwsh'), '-NoProfile', '-NonInteractive', '-File', str(script),
+                    '-Installation', str(installation), '-ProgramFiles', str(program_files),
+                    '-HostArchitecture', host,
+                ], check=True, capture_output=True, text=True)
+                self.assertEqual(result.stdout.strip(), str(directories[expected]) if expected else '')
+
     def test_release_requires_both_msvc_archives(self):
         msvc = {'x86_64-pc-windows-msvc', 'aarch64-pc-windows-msvc'}
         self.assertTrue(msvc <= set(native.TARGETS))

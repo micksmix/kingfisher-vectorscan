@@ -20,12 +20,7 @@ foreach ($line in $environment) {
         [Environment]::SetEnvironmentVariable($parts[0], $parts[1], 'Process')
     }
 }
-$llvm = @(
-    (Join-Path $installation 'VC\Tools\Llvm\ARM64\bin'),
-    (Join-Path $installation 'VC\Tools\Llvm\x64\bin'),
-    (Join-Path $installation 'VC\Tools\Llvm\bin'),
-    (Join-Path $env:ProgramFiles 'LLVM\bin')
-) | Where-Object { Test-Path (Join-Path $_ 'clang-cl.exe') } | Select-Object -First 1
+$llvm = & (Join-Path $PSScriptRoot 'find-msvc-llvm.ps1') -Installation $installation -ProgramFiles $env:ProgramFiles
 if (-not $llvm) { throw 'Install the Visual Studio LLVM/Clang component or LLVM for Windows' }
 $env:PATH = "$llvm;$env:PATH"
 $env:CC = 'clang-cl'
