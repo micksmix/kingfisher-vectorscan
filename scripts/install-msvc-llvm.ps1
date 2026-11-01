@@ -25,7 +25,22 @@ if (Test-Path $compiler) {
         # NSIS /D is last and intentionally unquoted; the rest of the argument is the path.
         $process = Start-Process -FilePath $installer -ArgumentList @('/S', "/D=$InstallPath") -Wait -PassThru
         if ($process.ExitCode -ne 0) { throw "LLVM installer exited $($process.ExitCode)" }
-    } finally { Remove-Item -LiteralPath $directory -Recurse -Force }
+    } finally {
+        # Windows can briefly retain a lock on the installer after it exits.
+        # Cleanup must not fail a valid installation or hide its original error.
+        for ($attempt = 1; $attempt -le 5; $attempt++) {
+            try {
+                Remove-Item -LiteralPath $directory -Recurse -Force -ErrorAction Stop
+                break
+            } catch {
+                if ($attempt -eq 5) {
+                    Write-Warning "Could not remove temporary LLVM download '$directory': $($_.Exception.Message)"
+                } else {
+                    Start-Sleep -Seconds 2
+                }
+            }
+        }
+    }
     if (-not (Test-Path $compiler)) { throw 'Pinned LLVM setup did not provide clang-cl' }
     $description = & $compiler --version
     if ($LASTEXITCODE -ne 0 -or ($description -join "`n") -notmatch 'clang version 22\.1\.3(?:\s|$)') { throw 'Installed LLVM version mismatch' }
