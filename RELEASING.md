@@ -41,7 +41,7 @@ The new musl assets are introduced in 0.1.2: publish them under the matching
 builds; its Zig recipes still need source builds unless configured with a
 compatible musl GCC runtime (see README.md).
 
-MSVC assets are introduced in prepared 0.1.3 under the matching `v0.1.3` tag.
+MSVC assets are introduced in 0.1.3 under the matching `v0.1.3` tag.
 They must pass native x64/ARM64 CI, the native suite, source/prebuilt consumers
 and packaged sys-crate verification before publication. Fusion ARM64 and x64
 emulation are local validation, not native x64 CI. Never replace 0.1.2 assets.
@@ -109,7 +109,7 @@ by these scripts.
 
 ## Kingfisher cutover
 
-Kingfisher remains unchanged during this unpublished preparation, so fresh clones,
+Kingfisher remains unchanged until cutover, so fresh clones,
 packaging, and Windows builds still have their current source and notices.
 
 For a local integration trial, replace **both** `vectorscan-rs = "0.0.6"`

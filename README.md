@@ -15,9 +15,9 @@ One repository contains two crates, versioned `0.1.3`:
 - [`kingfisher-vectorscan-sys`](kingfisher-vectorscan-sys): raw FFI bindings and native build support,
   including vendored Vectorscan 5.4.13.
 
-Version 0.1.3 is prepared for release. The previous version, 0.1.2, is published on crates.io:
-[kingfisher-vectorscan](https://crates.io/crates/kingfisher-vectorscan/0.1.2) and
-[kingfisher-vectorscan-sys](https://crates.io/crates/kingfisher-vectorscan-sys/0.1.2).
+Crates.io:
+[kingfisher-vectorscan](https://crates.io/crates/kingfisher-vectorscan/0.1.3) and
+[kingfisher-vectorscan-sys](https://crates.io/crates/kingfisher-vectorscan-sys/0.1.3).
 
 ## Usage
 
@@ -32,7 +32,7 @@ Cargo automatically downloads and links the native Vectorscan archive: you do
 compiles your Rust application and the Rust bindings; this is not a precompiled
 Rust crate. The target linker/SDK and C++ runtime libraries remain necessary.
 
-**Windows MSVC ABI support:** prepared release 0.1.3 adds x64/ARM64 archives and
+**Windows MSVC ABI support:** release 0.1.3 adds x64/ARM64 archives and
 source builds using LLVM clang-cl with Microsoft's SDK/STL. `cl.exe` does not
 support the engine's GNU language extensions. Existing GNU/LLVM-MinGW targets
 remain supported and use distinct libraries. See [Windows setup](WINDOWS.md).
@@ -80,7 +80,7 @@ crate before extracting it under Cargo's `OUT_DIR`. It needs no CMake, Boost,
 Ragel, or Vectorscan compilation. Rust and the target's linker, SDK, and C++
 runtime development/linker libraries are still required. This does not eliminate native build
 requirements of other dependencies in an application such as Kingfisher.
-MSVC release archives start with prepared 0.1.3; source builds need clang-cl,
+MSVC release archives start with 0.1.3; source builds need clang-cl,
 Ninja, Microsoft's C++ SDK and standalone Boost headers. See [WINDOWS.md](WINDOWS.md).
 
 Build selection and overrides:

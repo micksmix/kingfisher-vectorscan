@@ -2,7 +2,7 @@
 
 ## MSVC ABI targets (0.1.3)
 
-The **prepared, not-yet-published 0.1.3** release adds native source builds and
+The **0.1.3** release adds native source builds and
 checksum-pinned archive targets for `x86_64-pc-windows-msvc` and
 `aarch64-pc-windows-msvc`. Earlier published versions still require an external
 MSVC installation; their immutable archives are not changed.
@@ -66,7 +66,7 @@ kingfisher-vectorscan = "0.1.3"
 ```
 
 Published 0.1.1+ GNU/LLVM crates download and verify the matching static Vectorscan archive.
-MSVC archives start with the prepared 0.1.3 release.
+MSVC archives start with the 0.1.3 release.
 Cargo still compiles the Rust code, but Vectorscan needs no local C/C++ compilation,
 CMake, or Boost. Keep the matching linker and static C++ runtime libraries installed.
 The MSYS2 toolchain packages below provide these together with compiler drivers.

@@ -13,7 +13,7 @@ Version 0.1.2 also includes Linux musl x64/ARM64 archives built on Alpine
 libstdc++; the build script locates and statically links that runtime. Version
 0.1.1 still requires source builds for musl. Zig/libc++ builds should keep using
 `VECTORSCAN_BUILD_FROM_SOURCE=1` unless a compatible GCC runtime is supplied.
-Prepared 0.1.3 adds MSVC x64/ARM64 archive targets and source builds using LLVM
+Version 0.1.3 adds MSVC x64/ARM64 archive targets and source builds using LLVM
 clang-cl, Microsoft's SDK/STL, Ninja and standalone Boost headers. `cl.exe`
 cannot compile the engine's GNU extensions. MSVC archives contain `lib/hs.lib`
 and use `/MD`; `crt-static` consumers select a matching `/MT` source build.

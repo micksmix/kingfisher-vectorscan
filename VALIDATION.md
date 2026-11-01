@@ -2,7 +2,7 @@
 
 ## MSVC preparation, 2026-10-31
 
-Prepared version: **0.1.3**, not yet published. Test environment: VMware Fusion,
+Validated version: **0.1.3**. Test environment: VMware Fusion,
 Windows 11 ARM64, Rust 1.99.0, Visual Studio 2022 Build Tools and LLVM clang-cl
 19.1.5 with standalone Boost headers. ARM64 executables ran natively; x64
 executables ran under Windows emulation, not on native x64 hardware.
@@ -20,7 +20,7 @@ Passed for both `aarch64-pc-windows-msvc` and `x86_64-pc-windows-msvc`:
 macOS ARM64 Rust 1.99 checks also passed: workspace/all-target Rust tests, release
 build with the public native suite, formatting, release-helper tests, actionlint,
 and fresh Cargo package verification for both crates. The high-level package
-used an explicit local sys-crate override because 0.1.3 is not published yet.
+used an explicit local sys-crate override for 0.1.3.
 
 No native regression was removed or skipped to obtain these results. Native x64
 CI, the older Rust 1.73 minimum, optional CPU/AVX/SVE specialization and the

@@ -1,4 +1,4 @@
-# Fork 0.1.3 (prepared)
+# Fork 0.1.3
 
 - Add MSVC-ABI x64/ARM64 source builds with clang-cl, Microsoft SDK/STL and Ninja,
   plus separate checksum-pinned COFF archive targets and CI jobs.
@@ -7,7 +7,7 @@
 - Fix Microsoft aligned allocation/free pairing, C++ keyword and Windows RPC
   macro collisions, and utility directory reading. Add allocator and archive
   format/completeness regression tests.
-- Keep 0.1.2 published archives immutable. The new release is not published yet.
+- Keep 0.1.2 published archives immutable.
 
 # Fork 0.1.2
 
