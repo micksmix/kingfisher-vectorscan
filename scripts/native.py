@@ -18,6 +18,7 @@ TARGETS = (
     'x86_64-unknown-linux-musl', 'aarch64-unknown-linux-musl',
     'x86_64-apple-darwin', 'aarch64-apple-darwin',
     'x86_64-pc-windows-gnu', 'aarch64-pc-windows-gnullvm',
+    'x86_64-pc-windows-msvc', 'aarch64-pc-windows-msvc',
 )
 
 
@@ -28,6 +29,10 @@ def version():
 
 def asset_name(target):
     return f'vectorscan-{version()}-{target}.tar.gz'
+
+
+def library_path(target):
+    return 'lib/hs.lib' if target.endswith('-msvc') else 'lib/libhs.a'
 
 
 def build(target, prefix):
@@ -51,8 +56,14 @@ def build(target, prefix):
         args.append(f'-D{option}=OFF')
     if 'windows' in target:
         processor = 'ARM64' if target.startswith('aarch64') else 'AMD64'
-        args += ['-G', 'MinGW Makefiles', '-DCMAKE_SYSTEM_NAME=Windows',
+        generator = 'Ninja' if target.endswith('-msvc') else 'MinGW Makefiles'
+        args += ['-G', generator, '-DCMAKE_SYSTEM_NAME=Windows',
                  f'-DCMAKE_SYSTEM_PROCESSOR={processor}']
+        if target.endswith('-msvc'):
+            args += ['-DCMAKE_C_COMPILER=clang-cl', '-DCMAKE_CXX_COMPILER=clang-cl',
+                     f'-DCMAKE_C_COMPILER_TARGET={target}',
+                     f'-DCMAKE_CXX_COMPILER_TARGET={target}',
+                     '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL']
     for key in ('CC', 'CXX'):
         if os.environ.get(key):
             language = 'C' if key == 'CC' else 'CXX'
@@ -60,18 +71,20 @@ def build(target, prefix):
     if 'apple' in target:
         args.append('-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0')
     subprocess.run(args, check=True)
-    subprocess.run(['cmake', '--build', str(build_dir), '--parallel', '4'], check=True)
-    subprocess.run(['cmake', '--install', str(build_dir)], check=True)
+    subprocess.run(['cmake', '--build', str(build_dir), '--config', 'Release',
+                    '--parallel', '4'], check=True)
+    subprocess.run(['cmake', '--install', str(build_dir), '--config', 'Release'], check=True)
 
 
 def pack(target, prefix, output):
-    required = [prefix / 'lib/libhs.a', prefix / 'include/hs/hs.h']
+    library = library_path(target)
+    required = [prefix / library, prefix / 'include/hs/hs.h']
     for path in required:
         if not path.is_file():
             raise ValueError(f'Missing installed file: {path}')
     output.mkdir(parents=True, exist_ok=True)
     destination = output / asset_name(target)
-    files = [(prefix / 'lib/libhs.a', 'lib/libhs.a')]
+    files = [(prefix / library, library)]
     files += [(p, p.relative_to(prefix).as_posix()) for p in sorted((prefix / 'include/hs').glob('*.h'))]
     files += [(SYS / name, f'licenses/{name}') for name in ('NOTICE', 'LICENSE-VECTORSCAN', 'LICENSE-MIT', 'LICENSE-APACHE')]
     # Fixed metadata makes packaging deterministic for the same compiled inputs.

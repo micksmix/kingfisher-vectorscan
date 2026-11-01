@@ -190,8 +190,8 @@ public:
 /** \brief True iff there is a non-empty intersection between \a and \a b */
 bool overlaps(const CharReach &a, const CharReach &b);
 
-/** \brief True iff \a small is a subset of \a big. */
-bool isSubsetOf(const CharReach &small, const CharReach &big);
+/** \brief True iff \a subset is a subset of \a superset. */
+bool isSubsetOf(const CharReach &subset, const CharReach &superset);
 
 bool isutf8ascii(const CharReach &cr);
 bool isutf8start(const CharReach &cr);

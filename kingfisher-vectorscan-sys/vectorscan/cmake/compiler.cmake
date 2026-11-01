@@ -9,6 +9,12 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     string (REGEX REPLACE "^([0-9]+)\\.([0-9]+)\\.([0-9]+)$" "\\1" CLANG_MAJOR_VERSION "${CMAKE_CXX_COMPILER_VERSION}")
 endif()
 
+# Keep the Microsoft ABI without pretending cl.exe supports the GNU language
+# extensions used throughout the engine. clang-cl uses the Microsoft SDK/STL.
+if(MSVC AND NOT CMAKE_COMPILER_IS_CLANG)
+    message(FATAL_ERROR "MSVC ABI source builds require LLVM clang-cl, Ninja, and the Visual Studio C++ SDK; configure both CMAKE_C_COMPILER and CMAKE_CXX_COMPILER as clang-cl")
+endif()
+
 # compiler version checks TODO: test more compilers
 if (CMAKE_COMPILER_IS_GNUCXX)
     set(GNUCXX_MINVER "9")
@@ -17,4 +23,3 @@ if (CMAKE_COMPILER_IS_GNUCXX)
         message(FATAL_ERROR "A minimum of g++ ${GNUCXX_MINVER} is required for C++17 support")
     endif()
 endif()
-

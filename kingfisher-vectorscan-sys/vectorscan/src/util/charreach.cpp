@@ -99,8 +99,8 @@ bool overlaps(const CharReach &a, const CharReach &b) {
 }
 
 /** \brief True iff \a small is a subset of \a big. */
-bool isSubsetOf(const CharReach &small, const CharReach &big) {
-    return small.isSubsetOf(big);
+bool isSubsetOf(const CharReach &subset, const CharReach &superset) {
+    return subset.isSubsetOf(superset);
 }
 
 /// True if this character class is a subset of \a other.

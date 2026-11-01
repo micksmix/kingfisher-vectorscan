@@ -40,9 +40,15 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifdef _MSC_VER
+#include <filesystem>
+#define S_ISREG(mode) (((mode) & _S_IFMT) == _S_IFREG)
+#define S_ISDIR(mode) (((mode) & _S_IFMT) == _S_IFDIR)
+#else
 #include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>
+#endif
 
 #include <boost/algorithm/string/trim.hpp>
 
@@ -149,6 +155,16 @@ void loadExpressions(const string &inPath, ExpressionMap &exprMap) {
             exit(1);
         }
     } else if (S_ISDIR(st.st_mode)) {
+#ifdef _MSC_VER
+        std::error_code error;
+        auto directory = std::filesystem::directory_iterator(inPath, error);
+        if (error) {
+            cerr << "Can't open directory: '" << inPath << "'\n";
+            exit(1);
+        }
+        for (const auto &entry : directory) {
+            string basename(entry.path().filename().string());
+#else
         DIR *d = opendir(inPath.c_str());
         if (d == nullptr) {
             cerr << "Can't open directory: '" << inPath << "'\n";
@@ -156,6 +172,7 @@ void loadExpressions(const string &inPath, ExpressionMap &exprMap) {
         }
         for (struct dirent *ent = readdir(d); ent; ent = readdir(d)) {
             string basename(ent->d_name);
+#endif
             string fname(inPath);
             fname.push_back('/');
             fname.append(basename);
@@ -178,7 +195,9 @@ void loadExpressions(const string &inPath, ExpressionMap &exprMap) {
                 exit(1);
             }
         }
+#ifndef _MSC_VER
         (void)closedir(d);
+#endif
     } else {
         cerr << "Unsupported file type "
 	    << hex << showbase << (st.st_mode & S_IFMT)

@@ -5,12 +5,12 @@ use flate2::{write::GzEncoder, Compression};
 use sha2::{Digest, Sha256};
 use std::{fs, path::Path};
 
-fn archive(path: &Path, link: bool) {
+fn archive(path: &Path, library: &str, link: bool) {
     let mut tar = tar::Builder::new(GzEncoder::new(
         fs::File::create(path).unwrap(),
         Compression::fast(),
     ));
-    for name in ["lib/libhs.a", "include/hs/hs.h"] {
+    for name in [library, "include/hs/hs.h"] {
         let mut header = tar::Header::new_gnu();
         header.set_mode(0o644);
         if link {
@@ -50,7 +50,7 @@ fn manifest_is_versioned_and_selects_target_not_host() {
 fn archive_integrity_and_extraction() {
     let temp = tempfile::tempdir().unwrap();
     let path = temp.path().join("native.tar.gz");
-    archive(&path, false);
+    archive(&path, "lib/libhs.a", false);
     let hash = format!("{:x}", Sha256::digest(fs::read(&path).unwrap()));
     prebuilt::verify(&path, &hash).unwrap();
     prebuilt::unpack(&path, &temp.path().join("good")).unwrap();
@@ -59,7 +59,29 @@ fn archive_integrity_and_extraction() {
         b"abc"
     );
     assert!(prebuilt::verify(&path, &"0".repeat(64)).is_err());
-    archive(&path, true);
+    archive(&path, "lib/libhs.a", true);
     assert!(prebuilt::unpack(&path, &temp.path().join("bad")).is_err());
     assert!(!temp.path().join("outside").exists());
+}
+
+#[test]
+fn msvc_archives_use_a_distinct_library_format() {
+    for target in ["x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc"] {
+        assert_eq!(prebuilt::library_path(target), "lib/hs.lib");
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("native.tar.gz");
+        archive(&path, prebuilt::library_path(target), false);
+        let root = temp.path().join("native");
+        prebuilt::unpack(&path, &root).unwrap();
+        assert_eq!(fs::read(root.join("lib/hs.lib")).unwrap(), b"abc");
+        assert!(!root.join("lib/libhs.a").exists());
+    }
+    assert_eq!(
+        prebuilt::library_path("x86_64-pc-windows-gnu"),
+        "lib/libhs.a"
+    );
+    assert_eq!(
+        prebuilt::library_path("aarch64-pc-windows-gnullvm"),
+        "lib/libhs.a"
+    );
 }

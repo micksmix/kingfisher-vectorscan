@@ -2,6 +2,13 @@ cmake_minimum_required (VERSION 3.18.4)
 
 project (vectorscan C CXX)
 
+# Native Windows tools/tests need the usual Unix-sized stack for the engine's
+# deliberately deep compiler regression cases. This does not change a library
+# consumer's thread stack; embedders control their own worker stack sizes.
+if(MSVC)
+    string(APPEND CMAKE_EXE_LINKER_FLAGS " /STACK:8388608")
+endif()
+
 set (HS_MAJOR_VERSION 5)
 set (HS_MINOR_VERSION 4)
 set (HS_PATCH_VERSION 13)
@@ -208,6 +215,9 @@ if (CORRECT_PCRE_VERSION AND PCRE_BUILD_SOURCE AND BUILD_STATIC_LIBS)
 endif()
 
 set(RAGEL_C_FLAGS "-Wno-unused -funsigned-char")
+if(MSVC)
+    set(RAGEL_C_FLAGS "-Wno-unused /J")
+endif()
 
 set_source_files_properties(
     src/parser/Parser.cpp

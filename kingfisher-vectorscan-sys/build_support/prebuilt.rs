@@ -14,6 +14,14 @@ const MAX_UNPACKED: u64 = 512 * 1024 * 1024;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
+pub fn library_path(target: &str) -> &'static str {
+    if target.ends_with("-msvc") {
+        "lib/hs.lib"
+    } else {
+        "lib/libhs.a"
+    }
+}
+
 pub fn checksum(manifest: &str, version: &str, target: &str) -> Result<Option<String>> {
     let mut seen = HashSet::new();
     let mut found = None;
@@ -79,7 +87,8 @@ pub fn unpack(path: &Path, destination: &Path) -> Result<()> {
             return Err("archive path escapes destination".into());
         }
     }
-    if !destination.join("lib/libhs.a").is_file() || !destination.join("include/hs/hs.h").is_file()
+    if !(destination.join("lib/libhs.a").is_file() || destination.join("lib/hs.lib").is_file())
+        || !destination.join("include/hs/hs.h").is_file()
     {
         return Err("archive is missing Vectorscan library or headers".into());
     }
@@ -153,6 +162,9 @@ pub fn install(manifest: &str, version: &str, target: &str, out: &Path) -> Resul
     }
     fs::create_dir_all(&root)?;
     unpack(&cache, &root)?;
+    if !root.join(library_path(target)).is_file() {
+        return Err("archive library format does not match the Rust target".into());
+    }
     // Make the selected path visible with cargo -vv, including offline installs.
     writeln!(
         std::io::stderr(),

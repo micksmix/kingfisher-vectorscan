@@ -1,26 +1,72 @@
 # Windows native library
 
-## MSVC limitation
+## MSVC ABI targets (0.1.3)
 
-**There are no MSVC prebuilt archives, and the bundled Vectorscan source does
-not support MSVC.** This includes `x86_64-pc-windows-msvc` and
-`aarch64-pc-windows-msvc`, which are commonly the default Rust targets on Windows.
-The `build-from-source` feature does not remove this limitation.
+The **prepared, not-yet-published 0.1.3** release adds native source builds and
+checksum-pinned archive targets for `x86_64-pc-windows-msvc` and
+`aarch64-pc-windows-msvc`. Earlier published versions still require an external
+MSVC installation; their immutable archives are not changed.
 
-Use a supported GNU/LLVM target below, or supply an independently built,
-MSVC-compatible static library and headers via `HYPERSCAN_ROOT` (with
-`lib/hs.lib` and `include/hs/hs.h`). The build script also checks standard vcpkg
-locations for the MSVC target architecture. Discovery does not build an MSVC
-library for you. GNU/LLVM archives cannot be linked into an MSVC project.
+Vectorscan uses GNU language extensions, so source builds use **LLVM clang-cl**
+with the **Microsoft SDK, STL and ABI**, not `cl.exe`. The resulting static
+`lib/hs.lib` can be consumed by MSVC Rust projects and Node-API addons. MinGW
+GNU/LLVM archives are not MSVC-compatible and must never be substituted.
+
+Install Visual Studio 2022 C++ Build Tools, its x64/ARM64 tools and LLVM/Clang
+components, a Windows SDK, CMake, Ninja and standalone Boost headers. Do not add
+a MinGW include root as Boost's include directory: its CRT headers contaminate
+Microsoft builds. Copy only `boost/` to a separate header root if reusing an
+MSYS2 Boost installation.
+
+From a PowerShell session in this checkout:
+
+```powershell
+rustup target add aarch64-pc-windows-msvc x86_64-pc-windows-msvc
+$env:BOOST_ROOT = 'C:\native\boost_1_88_0'
+. ./scripts/msvc-env.ps1 -Target aarch64-pc-windows-msvc
+cargo test --workspace --all-targets --features build-from-source
+```
+
+Use `x86_64-pc-windows-msvc` for x64. `msvc-env.ps1` selects the target Microsoft
+SDK environment and clang-cl/Ninja; it does not install dependencies. Cargo's
+MSVC source path defaults to Ninja and clang-cl, selecting the target rather than
+the host architecture. Windows native code is built in Release even for Rust
+debug builds. Native tests use `kingfisher-vectorscan-sys/unit_hyperscan`.
+
+Native executable/test targets reserve an 8 MiB stack, matching common Unix
+defaults for deeply recursive compiler regression cases. A static library cannot
+set its caller's thread stack: embedders compiling complex custom patterns must
+configure an adequate worker stack themselves. The Kingfisher Node binding does
+so for rule compilation.
+
+Release archives use the standard dynamic Microsoft CRT (`/MD`); consumers need
+the compatible Microsoft C++ runtime. A Rust `crt-static` consumer selects a
+matching `/MT` source build rather than mixing the archive's CRT. A supplied
+`HYPERSCAN_ROOT` installation must already match the architecture and CRT.
+External installations and architecture-specific vcpkg discovery remain supported.
+
+To build a separate prefix or verify a complete MSVC workflow:
+
+```powershell
+python scripts/native.py build --target aarch64-pc-windows-msvc --prefix C:\native\vectorscan-arm64
+./scripts/test-msvc.ps1 -Target aarch64-pc-windows-msvc -NativeSuite
+```
+
+The verification script checks archive use with deliberately invalid C++/CMake
+commands, packaged-crate verification, source builds and the native suite. It
+restores the original local manifest afterward. CI has separate x64 and ARM64
+MSVC jobs in addition to GNU/LLVM jobs. Fusion ARM64 tests and x64 emulation
+are not a substitute for native x64 CI.
 
 ## Use prebuilt archives from Cargo.toml
 
 ```toml
 [dependencies]
-kingfisher-vectorscan = "0.1.1"
+kingfisher-vectorscan = "0.1.3"
 ```
 
-Published 0.1.1+ crates download and verify the matching static Vectorscan archive.
+Published 0.1.1+ GNU/LLVM crates download and verify the matching static Vectorscan archive.
+MSVC archives start with the prepared 0.1.3 release.
 Cargo still compiles the Rust code, but Vectorscan needs no local C/C++ compilation,
 CMake, or Boost. Keep the matching linker and static C++ runtime libraries installed.
 The MSYS2 toolchain packages below provide these together with compiler drivers.
@@ -58,7 +104,7 @@ To build Vectorscan yourself in a consuming project:
 
 ```toml
 [dependencies]
-kingfisher-vectorscan = { version = "0.1.1", features = ["build-from-source"] }
+kingfisher-vectorscan = { version = "0.1.3", features = ["build-from-source"] }
 ```
 
 For x64, in the **MINGW64** shell:

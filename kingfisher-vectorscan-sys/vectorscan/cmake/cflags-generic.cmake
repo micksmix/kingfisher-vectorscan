@@ -1,14 +1,22 @@
 # set compiler flags - more are tested and added later
-set(EXTRA_C_FLAGS "${OPT_C_FLAG} -std=c17 -Wall -Wextra ")
-set(EXTRA_CXX_FLAGS "${OPT_CXX_FLAG} -std=c++17 -Wall -Wextra ")
+if(MSVC)
+    set(EXTRA_C_FLAGS "/clang:${OPT_C_FLAG} /clang:-std=c17 /utf-8 /clang:-Wall /clang:-Wextra -D_CRT_SECURE_NO_WARNINGS -DNOMINMAX")
+    set(EXTRA_CXX_FLAGS "/clang:${OPT_CXX_FLAG} /std:c++17 /EHsc /bigobj /utf-8 /clang:-Wall /clang:-Wextra -D_CRT_SECURE_NO_WARNINGS -DNOMINMAX")
+    # Native tuning is assembled earlier using GNU architecture flags.
+    string(REGEX REPLACE "(^| )(-m[^ ]+)" "\\1/clang:\\2" ARCH_C_FLAGS "${ARCH_C_FLAGS}")
+    string(REGEX REPLACE "(^| )(-m[^ ]+)" "\\1/clang:\\2" ARCH_CXX_FLAGS "${ARCH_CXX_FLAGS}")
+else()
+    set(EXTRA_C_FLAGS "${OPT_C_FLAG} -std=c17 -Wall -Wextra ")
+    set(EXTRA_CXX_FLAGS "${OPT_CXX_FLAG} -std=c++17 -Wall -Wextra ")
+endif()
 if (NOT CMAKE_COMPILER_IS_CLANG)
     set(EXTRA_CXX_FLAGS "${EXTRA_CXX_FLAGS} -fno-new-ttp-matching")
 endif()
 
 # Always use -Werror *also during release builds
 if (WARNINGS_AS_ERRORS)
-    set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -Wall -Werror")
-    set(EXTRA_CXX_FLAGS "${EXTRA_CXX_FLAGS} -Wall -Werror")
+    set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -Werror")
+    set(EXTRA_CXX_FLAGS "${EXTRA_CXX_FLAGS} -Werror")
 endif()
 
 if (DISABLE_ASSERTS)

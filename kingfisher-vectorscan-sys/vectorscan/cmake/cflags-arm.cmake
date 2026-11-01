@@ -24,10 +24,18 @@ endif()
 set(ARMV8_ARCH "armv8-a")
 set(SVE_ARCH "${ARMV8_ARCH}+sve")
 set(SVE2_BITPERM_ARCH "${SVE2_ARCH}+sve2-bitperm")
+set(SVE_FLAG "-march=${SVE_ARCH}")
+set(SVE2_FLAG "-march=${SVE2_ARCH}")
+set(SVE2_BITPERM_FLAG "-march=${SVE2_BITPERM_ARCH}")
+if(MSVC)
+    set(SVE_FLAG "/clang:${SVE_FLAG}")
+    set(SVE2_FLAG "/clang:${SVE2_FLAG}")
+    set(SVE2_BITPERM_FLAG "/clang:${SVE2_BITPERM_FLAG}")
+endif()
 
 CHECK_INCLUDE_FILE_CXX(arm_neon.h HAVE_C_ARM_NEON_H)
 if (BUILD_SVE OR BUILD_SVE2 OR BUILD_SVE2_BITPERM OR FAT_RUNTIME)
-  set(CMAKE_REQUIRED_FLAGS "-march=${SVE_ARCH}")
+  set(CMAKE_REQUIRED_FLAGS "${SVE_FLAG}")
   CHECK_INCLUDE_FILE_CXX(arm_sve.h HAVE_C_ARM_SVE_H)
   if (NOT HAVE_C_ARM_SVE_H)
     message(FATAL_ERROR "arm_sve.h is required to build for SVE.")
@@ -41,7 +49,7 @@ int main() {
 }" HAVE_NEON)
 
 if (BUILD_SVE2_BITPERM)
-    set(CMAKE_REQUIRED_FLAGS "-march=${SVE2_BITPERM_ARCH}")
+    set(CMAKE_REQUIRED_FLAGS "${SVE2_BITPERM_FLAG}")
     CHECK_C_SOURCE_COMPILES("#include <arm_sve.h>
     int main() {
         svuint8_t a = svbext(svdup_u8(1), svdup_u8(2));
@@ -49,7 +57,7 @@ if (BUILD_SVE2_BITPERM)
     }" HAVE_SVE2_BITPERM)
 endif()
 if (BUILD_SVE2)
-    set(CMAKE_REQUIRED_FLAGS "-march=${SVE2_ARCH}")
+    set(CMAKE_REQUIRED_FLAGS "${SVE2_FLAG}")
     CHECK_C_SOURCE_COMPILES("#include <arm_sve.h>
         int main() {
             svuint8_t a = svbsl(svdup_u8(1), svdup_u8(2), svdup_u8(3));
@@ -57,7 +65,7 @@ if (BUILD_SVE2)
     }" HAVE_SVE2)
 endif()
 if (BUILD_SVE)
-    set(CMAKE_REQUIRED_FLAGS "-march=${SVE_ARCH}")
+    set(CMAKE_REQUIRED_FLAGS "${SVE_FLAG}")
     CHECK_C_SOURCE_COMPILES("#include <arm_sve.h>
         int main() {
             svuint8_t a = svdup_u8(1);
@@ -89,5 +97,4 @@ else (NOT FAT_RUNTIME)
         message(FATAL_ERROR "Neon/ASIMD support required for Arm support")
     endif ()
 endif ()
-
 

@@ -37,6 +37,7 @@ add_definitions(-DGTEST_HAS_PTHREAD=0 -DSRCDIR=${PROJECT_SOURCE_DIR})
 
 set(unit_hyperscan_SOURCES
     ${gtest_SOURCES}
+    hyperscan/aligned_alloc.cpp
     hyperscan/allocators.cpp
     hyperscan/arg_checks.cpp
     hyperscan/bad_patterns.cpp

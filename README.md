@@ -8,22 +8,22 @@ extracted from Kingfisher's vendored implementation. It has no Kingfisher depend
 and can be used in any Rust application that needs block or streaming regex matching.
 See [NOTICE](NOTICE) for attribution and exact source commits.
 
-One repository contains two crates, versioned `0.1.2`:
+One repository contains two crates, versioned `0.1.3`:
 
 - [`kingfisher-vectorscan`](kingfisher-vectorscan): ergonomic bindings, block and streaming scanners,
   and block database serialization/deserialization.
 - [`kingfisher-vectorscan-sys`](kingfisher-vectorscan-sys): raw FFI bindings and native build support,
   including vendored Vectorscan 5.4.13.
 
-Version 0.1.2 is prepared for release. The previous version, 0.1.1, is published on crates.io:
-[kingfisher-vectorscan](https://crates.io/crates/kingfisher-vectorscan/0.1.1) and
-[kingfisher-vectorscan-sys](https://crates.io/crates/kingfisher-vectorscan-sys/0.1.1).
+Version 0.1.3 is prepared for release. The previous version, 0.1.2, is published on crates.io:
+[kingfisher-vectorscan](https://crates.io/crates/kingfisher-vectorscan/0.1.2) and
+[kingfisher-vectorscan-sys](https://crates.io/crates/kingfisher-vectorscan-sys/0.1.2).
 
 ## Usage
 
 ```toml
 [dependencies]
-kingfisher-vectorscan = "0.1.2"
+kingfisher-vectorscan = "0.1.3"
 ```
 
 Then run `cargo build --release` in your project. On the supported targets below,
@@ -32,10 +32,10 @@ Cargo automatically downloads and links the native Vectorscan archive: you do
 compiles your Rust application and the Rust bindings; this is not a precompiled
 Rust crate. The target linker/SDK and C++ runtime libraries remain necessary.
 
-**Windows MSVC limitation:** the default Windows Rust targets (`*-pc-windows-msvc`)
-have no prebuilt archive, and the bundled source cannot be built with MSVC.
-Use the supported GNU/LLVM targets or supply an independently built compatible
-MSVC library. See [Windows setup](WINDOWS.md).
+**Windows MSVC ABI support:** prepared release 0.1.3 adds x64/ARM64 archives and
+source builds using LLVM clang-cl with Microsoft's SDK/STL. `cl.exe` does not
+support the engine's GNU language extensions. Existing GNU/LLVM-MinGW targets
+remain supported and use distinct libraries. See [Windows setup](WINDOWS.md).
 
 ```rust
 use kingfisher_vectorscan::{BlockDatabase, BlockScanner, Flag, Pattern, Scan};
@@ -57,7 +57,7 @@ Run the same example with `cargo run -p kingfisher-vectorscan --example scan`.
 Existing users can retain `vectorscan_rs` imports by aliasing the package:
 
 ```toml
-vectorscan-rs = { package = "kingfisher-vectorscan", version = "0.1.2" }
+vectorscan-rs = { package = "kingfisher-vectorscan", version = "0.1.3" }
 ```
 
 ## Build requirements and portability
@@ -72,6 +72,7 @@ Vectorscan archives from the matching GitHub release on these targets:
 | `x86_64-apple-darwin`, `aarch64-apple-darwin` | macOS 11+, Apple SDK/linker and system libc++ |
 | `x86_64-pc-windows-gnu` | MSYS2 MINGW64 linker and static GNU C++ runtime libraries |
 | `aarch64-pc-windows-gnullvm` | MSYS2 CLANGARM64 linker and static libc++/libc++abi/unwind libraries |
+| `x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc` (0.1.3+) | Microsoft target SDK/linker and compatible C++ runtime; archives use `/MD` |
 
 A normal published-crate build downloads the archive with `curl` (included in
 macOS/Windows; install it on Linux) and verifies a SHA-256 hash embedded in the
@@ -79,8 +80,8 @@ crate before extracting it under Cargo's `OUT_DIR`. It needs no CMake, Boost,
 Ragel, or Vectorscan compilation. Rust and the target's linker, SDK, and C++
 runtime development/linker libraries are still required. This does not eliminate native build
 requirements of other dependencies in an application such as Kingfisher.
-Windows MSVC does not have release archives; see [WINDOWS.md](WINDOWS.md)
-for Windows target selection and external MSVC libraries.
+MSVC release archives start with prepared 0.1.3; source builds need clang-cl,
+Ninja, Microsoft's C++ SDK and standalone Boost headers. See [WINDOWS.md](WINDOWS.md).
 
 Build selection and overrides:
 
@@ -99,8 +100,9 @@ Build selection and overrides:
 
 Source checkouts have an empty release manifest and build from source. The
 publishing workflow fills the manifest from tested assets before packaging.
-Unsupported targets also use source builds, except MSVC, which requires an
-external installation via `HYPERSCAN_ROOT` or a matching vcpkg layout. A missing download or checksum failure is a hard error
+Unsupported targets also use source builds. Supported MSVC x64/ARM64 targets use
+clang-cl; external installations via `HYPERSCAN_ROOT` or a matching vcpkg layout
+remain available. A missing download or checksum failure is a hard error
 with override instructions; it never silently switches to compiling C++.
 
 ### Linux musl and Kingfisher
@@ -134,14 +136,14 @@ To compile the bundled native library in a consuming project, use:
 
 ```toml
 [dependencies]
-kingfisher-vectorscan = { version = "0.1.2", features = ["build-from-source"] }
+kingfisher-vectorscan = { version = "0.1.3", features = ["build-from-source"] }
 ```
 
 Then run `cargo build --release`. Alternatively, set
 `VECTORSCAN_BUILD_FROM_SOURCE=1` for the build. From this repository, run
 `cargo build --workspace --release --features build-from-source`.
-These options support the Unix and Windows GNU/LLVM source build paths; they do
-not add MSVC source support. See [Windows source instructions](WINDOWS.md#building-from-source).
+These options support Unix, Windows GNU/LLVM, and MSVC-ABI x64/ARM64 source builds
+through clang-cl. See [Windows source instructions](WINDOWS.md).
 
 Source builds need a C/C++ compiler, CMake, Make or Ninja, and Boost headers
 (>= 1.57). For example, Xcode Command Line Tools plus `brew install cmake boost`

@@ -11,9 +11,11 @@ attribution. Local `origin` uses the personal SSH alias
 ## Native archive pipeline (0.1.1+)
 
 `ci.yml` calls `native.yml`, which builds portable static Vectorscan archives for
-Linux GNU and musl, macOS, and Windows GNU/LLVM, on x64 and ARM64 runners.
+Linux GNU and musl, macOS, and Windows GNU/LLVM and MSVC, on x64 and ARM64 runners.
 GNU Linux uses Ubuntu 22.04; musl uses Rust 1.96 on Alpine 3.23 in Docker; macOS
-has deployment target 11.0. CPU-native and optional SIMD specialization are disabled. Archives contain `lib/libhs.a`, headers, and license notices.
+has deployment target 11.0. CPU-native and optional SIMD specialization are disabled.
+GNU/LLVM and Unix archives contain `lib/libhs.a`; MSVC archives contain `lib/hs.lib`
+and use Microsoft's dynamic CRT. Both contain headers and license notices.
 They deliberately do not redistribute toolchain C++ runtimes.
 
 Every archive is tested through the Rust APIs and `cargo package`, with an invalid
@@ -21,7 +23,7 @@ CMake/C++ compiler path and offline mode, so a source fallback fails the job.
 Regular CI continues to exercise source builds and the native suite. Tests use
 Rust 1.96.0; the inherited 1.73 minimum remains unverified.
 
-The tag-triggered publishing job downloads the eight tested artifacts, creates a
+The tag-triggered publishing job downloads the ten tested artifacts, creates a
 GitHub release, embeds their SHA-256 hashes in
 `kingfisher-vectorscan-sys/prebuilt-manifest.txt`, and packages/publishes the crates.
 Only that generated manifest may differ from the tag when publishing. The crate
@@ -38,6 +40,11 @@ The new musl assets are introduced in 0.1.2: publish them under the matching
 `v0.1.2` tag, without changing an existing published manifest. Kingfisher's Alpine recipes can then stop forcing source
 builds; its Zig recipes still need source builds unless configured with a
 compatible musl GCC runtime (see README.md).
+
+MSVC assets are introduced in prepared 0.1.3 under the matching `v0.1.3` tag.
+They must pass native x64/ARM64 CI, the native suite, source/prebuilt consumers
+and packaged sys-crate verification before publication. Fusion ARM64 and x64
+emulation are local validation, not native x64 CI. Never replace 0.1.2 assets.
 
 Local archive testing, from the repository root:
 
