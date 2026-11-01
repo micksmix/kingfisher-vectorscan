@@ -46,6 +46,18 @@ They must pass native x64/ARM64 CI, the native suite, source/prebuilt consumers
 and packaged sys-crate verification before publication. Fusion ARM64 and x64
 emulation are local validation, not native x64 CI. Never replace 0.1.2 assets.
 
+The prepared **0.1.4** archive baseline is **VS 2022 / MSVC 14.44**, with the
+existing optimized engine/SIMD settings unchanged. `install-msvc-baseline.ps1`
+provisions that producer toolset if absent; `test-msvc.ps1` selects it explicitly.
+`install-msvc-llvm.ps1` independently provisions SHA-256-pinned LLVM **22.1.3**,
+and the producer rejects an older archive compiler that regresses ARM64 throughput.
+`native.py` rejects toolset drift and packs `lib/build-toolchain.json`, including
+the selected toolset/runtime, clang version and the exact library SHA-256. A separately packed
+prefix must have matching metadata, not merely a file named `hs.lib`.
+VS 2026 x64/ARM64 consumer jobs download and link those same artifacts in fresh
+target directories with invalid native-build commands. Do not change the 0.1.3
+asset hashes or use a compatibility/performance workaround to pass older consumers.
+
 Local archive testing, from the repository root:
 
 ```sh

@@ -136,6 +136,12 @@ jobs:
         with:
           toolchain: 1.96.0
           targets: ${{ matrix.target }}
+      - name: Install the VS 2022 / MSVC 14.44 archive baseline
+        shell: pwsh
+        run: ./scripts/install-msvc-baseline.ps1
+      - name: Install pinned optimized clang-cl independently of the STL baseline
+        shell: pwsh
+        run: ./scripts/install-msvc-llvm.ps1
       - name: Install Boost headers
         shell: pwsh
         run: |
@@ -148,12 +154,45 @@ jobs:
           "BOOST_ROOT=$env:BOOST_ROOT" >> $env:GITHUB_ENV
       - name: Verify archive, source build, native suite and packaged crate
         shell: pwsh
-        run: ./scripts/test-msvc.ps1 -Target '${{ matrix.target }}' -NativeSuite
+        run: ./scripts/test-msvc.ps1 -Target '${{ matrix.target }}' -NativeSuite -VisualStudio 2022 -Toolset 14.44
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: native-${{ matrix.target }}
           path: native-archives/*.tar.gz
           if-no-files-found: error
+
+  msvc-consumers:
+    name: VS 2026 consumer (${{ matrix.target }})
+    needs: msvc-archives
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2025-vs2026
+            target: x86_64-pc-windows-msvc
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87
+        with:
+          toolchain: 1.96.0
+          targets: ${{ matrix.target }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: native-*-pc-windows-msvc
+          path: native-archives
+          merge-multiple: true
+      - name: Verify baseline archives with the newer Microsoft SDK/STL
+        shell: pwsh
+        run: |
+          python scripts/native.py manifest
+          if ($LASTEXITCODE -ne 0) { throw 'Baseline archive manifest generation failed' }
+          ./scripts/test-msvc-consumer.ps1 -Target '${{ matrix.target }}' -VisualStudio 2026
 
   musl-archives:
     name: Prebuilt (${{ matrix.target }})

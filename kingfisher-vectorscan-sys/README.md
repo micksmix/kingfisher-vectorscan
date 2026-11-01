@@ -19,6 +19,14 @@ cannot compile the engine's GNU extensions. MSVC archives contain `lib/hs.lib`
 and use `/MD`; `crt-static` consumers select a matching `/MT` source build.
 GNU/LLVM-MinGW libraries cannot be linked into MSVC projects.
 
+Prepared 0.1.4 release archives pin their STL/CRT baseline to VS 2022 / MSVC 14.44,
+with existing optimized engine/SIMD settings unchanged and no STL-vectorization
+disabling workaround. Published 0.1.3 ARM64 archives need the newer 14.51 STL
+and remain immutable. See the Windows guide for the producer/consumer matrix.
+Archive generation pins clang-cl 22.1.3 independently of the VS 2022 / 14.44
+SDK/STL and rejects unoptimized CMake cache resets; consumers do not need LLVM
+when using the resulting prebuilt library.
+
 `HYPERSCAN_ROOT` selects an installed static library and headers on any platform.
 Use `build-from-source` or `VECTORSCAN_BUILD_FROM_SOURCE=1` for the bundled source.
 CPU specialization, native tests, and ASan force source builds. These source
