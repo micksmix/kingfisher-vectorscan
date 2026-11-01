@@ -42,7 +42,12 @@ class NativeReleaseTests(unittest.TestCase):
                     '-Installation', str(installation), '-ProgramFiles', str(program_files),
                     '-HostArchitecture', host,
                 ], check=True, capture_output=True, text=True)
-                self.assertEqual(result.stdout.strip(), str(directories[expected]) if expected else '')
+                selected = result.stdout.strip()
+                expected_path = directories[expected].as_posix() if expected else ''
+                # PowerShell and MSYS2 use different separators; exercise both styles on every host.
+                for output in (selected.replace('\\', '/'), selected.replace('/', '\\')):
+                    with self.subTest(output=output):
+                        self.assertEqual(output.replace('\\', '/'), expected_path)
 
     def test_release_requires_both_msvc_archives(self):
         msvc = {'x86_64-pc-windows-msvc', 'aarch64-pc-windows-msvc'}
